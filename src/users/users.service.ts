@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './schemas/user.schema';
@@ -10,39 +14,36 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
-  async create(createUserDto: CreateUserDto) {
-    let user = await this.userModel.findOne({ email: createUserDto.email });
-    if (user) throw new ConflictException('User with this email already exist');
-
-    const salt = await bcrypt.genSalt(10);
-    const encryptedPassword = await bcrypt.hash(createUserDto.password, salt);
-
-    user = new this.userModel({
-      ...createUserDto,
-      password: encryptedPassword,
-    });
-    await user.save();
-
-    return {} as User;
-  }
-
   async findAll() {
-    return {} as User[];
-  }
-
-  async findCurrentUser() {
-    return {} as User;
+    const users = await this.userModel.find().select('-password');
+    return users;
   }
 
   async findOne(id: string) {
-    return {} as User;
+    const user = await this.userModel.findById(id).select('-password');
+    if (!user)
+      throw new NotFoundException('User with the provided id not found');
+
+    return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    return {} as User;
+    const user = await this.userModel
+      .findByIdAndUpdate(id, updateUserDto, {
+        new: true,
+      })
+      .select('-password');
+    if (!user)
+      throw new NotFoundException('User with the provided id not found');
+
+    return user;
   }
 
   async remove(id: string) {
-    return {} as User;
+    const user = await this.userModel.findByIdAndDelete(id).select('-password');
+    if (!user)
+      throw new NotFoundException('User with the provided id not found');
+
+    return user;
   }
 }

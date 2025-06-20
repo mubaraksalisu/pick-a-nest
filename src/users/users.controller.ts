@@ -7,31 +7,27 @@ import {
   Param,
   Delete,
   ValidationPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './schemas/user.schema';
+import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
+import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
+import { AdminGuard } from 'src/shared/guards/admin.guard';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  create(@Body(ValidationPipe) createUserDto: CreateUserDto): Promise<User> {
-    return this.usersService.create(createUserDto);
-  }
-
+  @UseGuards(JwtAuthGuard, AdminGuard)
   @Get()
   findAll(): Promise<User[]> {
     return this.usersService.findAll();
   }
 
-  @Get('me')
-  findCurrentUser(): Promise<User> {
-    return this.usersService.findCurrentUser();
-  }
-
+  @UseGuards(ObjectIdGuard, JwtAuthGuard)
   @Get(':id')
   findOne(@Param('id') id: string): Promise<User> {
     return this.usersService.findOne(id);
@@ -45,6 +41,7 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @UseGuards(ObjectIdGuard, JwtAuthGuard)
   @Delete(':id')
   remove(@Param('id') id: string): Promise<User> {
     return this.usersService.remove(id);
