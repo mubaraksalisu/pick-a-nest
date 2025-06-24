@@ -16,5 +16,6 @@ import { Property, PropertySchema } from './schemas/property.schema';
   ],
   controllers: [PropertiesController],
   providers: [PropertiesService],
+  exports: [MongooseModule],
 })
 export class PropertiesModule {}
