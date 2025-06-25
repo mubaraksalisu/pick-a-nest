@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FavoritesModule } from './favorites/favorites.module';
 import { UsersModule } from './users/users.module';
-import { ReviewsModule } from './reviews/reviews.module';
 import { StatesModule } from './states/states.module';
 import { CategoriesModule } from './categories/categories.module';
 import { PropertiesModule } from './properties/properties.module';
@@ -9,6 +8,7 @@ import { VisitsModule } from './visits/visits.module';
 import { AuthModule } from './auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PropertyReviewsModule } from './property-reviews/property-reviews.module';
 
 @Module({
   imports: [
@@ -25,12 +25,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
     FavoritesModule,
     UsersModule,
-    ReviewsModule,
     StatesModule,
     CategoriesModule,
     PropertiesModule,
     AuthModule,
     VisitsModule,
+    PropertyReviewsModule,
   ],
 })
 export class AppModule {}

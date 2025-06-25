@@ -67,7 +67,6 @@ export class PropertiesService {
       const user = await this.userModel.findById(updatePropertyDto.ownerId);
       if (!user)
         throw new NotFoundException('No user found with the provided ownerId');
-      property.ownerId = new Types.ObjectId(updatePropertyDto.ownerId);
     }
 
     if (updatePropertyDto.categoryId) {
@@ -78,7 +77,6 @@ export class PropertiesService {
         throw new NotFoundException(
           'No category found with the provided categoryId',
         );
-      property.categoryId = new Types.ObjectId(updatePropertyDto.categoryId);
     }
 
     Object.assign(property, updatePropertyDto);
