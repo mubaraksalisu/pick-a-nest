@@ -14,7 +14,6 @@ import { PropertyReviewsService } from './property-reviews.service';
 import { CreatePropertyReviewDto } from './dto/create-property-review.dto';
 import { UpdatePropertyReviewDto } from './dto/update-property-review.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
-import { QueryParams } from './interfaces/query-params.interface';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
 
 @Controller('property-reviews')

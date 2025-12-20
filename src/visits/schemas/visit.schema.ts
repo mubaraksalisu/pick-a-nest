@@ -32,8 +32,8 @@ export class Visit extends Document {
 
   @Prop({
     type: String,
-    enum: ['scheduled', 'completed', 'canceled', 'confirmed'],
-    default: 'scheduled',
+    enum: ['requesting', 'completed', 'canceled', 'scheduled'],
+    default: 'requesting',
   })
   status: string;
 }

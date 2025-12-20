@@ -25,7 +25,7 @@ export class CreateVisitDto {
   visitDate: Date;
 
   @IsString()
-  @IsEnum(['request', 'completed', 'canceled', 'confirmed'])
+  @IsEnum(['requesting', 'completed', 'canceled', 'scheduled'])
   @IsOptional()
-  status: string = 'request';
+  status: string = 'requesting';
 }

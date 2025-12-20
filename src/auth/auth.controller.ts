@@ -11,7 +11,7 @@ import { AuthService } from './auth.service';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { LocalGuard } from './guards/local.guard';
 import { Request } from 'express';
-import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
 

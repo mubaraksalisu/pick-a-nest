@@ -123,11 +123,11 @@ export class Property extends Document {
   @Prop({
     type: [String],
     validate: {
-      validator: function (value) {
+      validator: function (value: any) {
         return (
           value &&
           value.length > 0 &&
-          value.every((url) => url.length > 4 && url.length <= 2048)
+          value.every((url: string) => url.length > 4 && url.length <= 2048)
         );
       },
       message:

@@ -2,10 +2,10 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from 'src/users/schemas/user.schema';
+import { User } from '../users/schemas/user.schema';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
 
 @Injectable()
