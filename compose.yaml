@@ -1,0 +1,24 @@
+services:
+  server:
+    build:
+      context: .
+    environment:
+      # NODE_ENV: production
+      DATABASE_URL: mongodb://db:27017/pick-a-nest-db
+      DATABASE_NAME: pick-a-nest-db
+      SECRET: JWTSecretKey
+      EXPIRES_IN: 7d
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/app
+
+  db:
+    image: mongo
+    ports:
+      - 27017:27017
+    volumes:
+      - real_estate:/data/db
+
+volumes:
+  real_estate:

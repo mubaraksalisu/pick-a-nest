@@ -8,12 +8,10 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthPayloadDto } from './dto/auth.dto';
 import { LocalGuard } from './guards/local.guard';
 import { Request } from 'express';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
-import { JwtPayload } from './interfaces/jwtPayload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -21,11 +19,8 @@ export class AuthController {
 
   @UseGuards(LocalGuard)
   @Post('login')
-  login(
-    @Req() req: Request,
-    @Body(ValidationPipe) authPayloadDto: AuthPayloadDto,
-  ) {
-    return req.user;
+  login(@Req() req: Request) {
+    return this.authService.login(req.user);
   }
 
   @Post('register')
@@ -36,6 +31,6 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   profile(@Req() req: Request) {
-    return this.authService.profile(req.user as JwtPayload);
+    return req.user;
   }
 }

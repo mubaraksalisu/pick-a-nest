@@ -6,7 +6,6 @@ import { User } from '../users/schemas/user.schema';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
-import { JwtPayload } from './interfaces/jwtPayload.interface';
 
 @Injectable()
 export class AuthService {
@@ -18,10 +17,15 @@ export class AuthService {
   async validateUser({ email, password }: AuthPayloadDto) {
     const user = await this.userModel.findOne({ email });
     if (user && (await bcrypt.compare(password, user.password))) {
-      const { _id, role, email } = user;
-      return this.jwtService.sign({ _id, role, email });
+      const { password, ...result } = user;
+      return result;
     }
     return null;
+  }
+
+  async login(user: any) {
+    const payload = { sub: user._id, role: user.role, email: user.email };
+    return { access_token: this.jwtService.sign(payload) };
   }
 
   async register(createUserDto: CreateUserDto) {
@@ -48,9 +52,5 @@ export class AuthService {
     const userObject = savedUser.toObject();
     const { password, ...result } = userObject;
     return { authToken, user: result };
-  }
-
-  async profile(payload: JwtPayload) {
-    return await this.userModel.findById(payload._id).select('-password');
   }
 }

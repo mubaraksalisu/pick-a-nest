@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PropertyReviewsModule } from './property-reviews/property-reviews.module';
+import { HomeModule } from './home/home.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PropertyReviewsModule } from './property-reviews/property-reviews.modul
     AuthModule,
     VisitsModule,
     PropertyReviewsModule,
+    HomeModule,
   ],
 })
 export class AppModule {}
