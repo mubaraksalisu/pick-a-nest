@@ -12,7 +12,9 @@ import { LocalGuard } from './guards/local.guard';
 import { Request } from 'express';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
+import { Throttle } from '@nestjs/throttler';
 
+@Throttle({ default: { limit: 10, ttl: 60000 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
