@@ -16,6 +16,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
+import { HttpExceptionFilter } from './shared/filters/httpException.filter';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import * as winston from 'winston';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    HttpExceptionFilter,
   ],
 })
 export class AppModule {}
