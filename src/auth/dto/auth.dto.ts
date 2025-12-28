@@ -17,3 +17,26 @@ export class AuthPayloadDto {
   @ApiProperty({ example: '12345', description: 'password of the user' })
   password: string;
 }
+
+export class LoginDto {
+  access_token: string;
+}
+
+export class Profile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  phone: string;
+  active: boolean;
+  imageUrl: string;
+  _id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
+
+export class RegisterationDto {
+  access_token: string;
+  user: Profile;
+}

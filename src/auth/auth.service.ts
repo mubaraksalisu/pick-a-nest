@@ -17,7 +17,7 @@ export class AuthService {
   async validateUser({ email, password }: AuthPayloadDto) {
     const user = await this.userModel.findOne({ email });
     if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
+      const { password, ...result } = user.toObject();
       return result;
     }
     return null;

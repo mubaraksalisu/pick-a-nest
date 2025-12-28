@@ -13,8 +13,21 @@ import { Request } from 'express';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { Throttle } from '@nestjs/throttler';
-import { ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AuthPayloadDto } from './dto/auth.dto';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import {
+  AuthPayloadDto,
+  LoginDto,
+  Profile,
+  RegisterationDto,
+} from './dto/auth.dto';
 
 @Throttle({ default: { limit: 10, ttl: 60000 } })
 @ApiTags('auth')
@@ -24,20 +37,38 @@ export class AuthController {
 
   @UseGuards(LocalGuard)
   @Post('login')
-  @ApiResponse({ status: 201, description: 'user login success', type: String })
+  @ApiOperation({
+    summary: 'Authenticate user',
+    description: 'returns access_token if credentials are valid',
+  })
+  @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
+  @ApiCreatedResponse({ description: 'user login success', type: LoginDto })
   login(@Req() req: Request, @Body(ValidationPipe) authDto: AuthPayloadDto) {
     return this.authService.login(req.user);
   }
 
   @Post('register')
-  @ApiResponse({ status: 201, description: 'Create a new user' })
+  @ApiOperation({
+    summary: 'Create new user',
+    description: 'Register a new user on the system',
+  })
+  @ApiCreatedResponse({
+    description: 'Create a new user',
+    type: RegisterationDto,
+  })
+  @ApiConflictResponse({ description: 'user with this email already exist.' })
   register(@Body(ValidationPipe) createUserDto: CreateUserDto) {
     return this.authService.register(createUserDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  @ApiResponse({ status: 200, description: 'Return user profile' })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Return user profile' })
+  @ApiOkResponse({ description: 'Return user profile', type: Profile })
+  @ApiUnauthorizedResponse({
+    description: 'Authentication required to access resource',
+  })
   profile(@Req() req: Request) {
     return req.user;
   }
