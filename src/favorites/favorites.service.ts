@@ -1,9 +1,8 @@
 import {
-  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateFavoriteDto } from './dto/create-favorite.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/users/schemas/user.schema';
 import { Model } from 'mongoose';
@@ -18,19 +17,23 @@ export class FavoritesService {
     @InjectModel(Property.name) private propertyModel: Model<Property>,
   ) {}
 
-  async getMyFavorites(userId: string): Promise<Favorite[]> {
-    return await this.favoriteModel.find({ userId }).populate('propertyId');
+  async getMyFavorites(userId: string) {
+    const userFavorites = await this.favoriteModel
+      .find({ userId })
+      .populate('propertyId');
+
+    if (!userFavorites)
+      throw new NotFoundException('User favorites list is empty');
+
+    return { favorites: [...userFavorites] };
   }
 
-  async isPropertyFavorite(
-    userId: string,
-    propertyId: string,
-  ): Promise<boolean> {
-    const count = await this.favoriteModel.countDocuments({
-      userId,
-      propertyId,
-    });
-    return count > 0;
+  async findOne(id: string) {
+    const favorite = await this.favoriteModel.findById(id);
+    if (!favorite)
+      throw new NotFoundException('No favorite with the provided id');
+
+    return favorite;
   }
 
   async addToFavorite(userId: string, propertyId: string): Promise<Favorite> {
@@ -43,8 +46,7 @@ export class FavoritesService {
       throw new NotFoundException('No property with the provided propertyId');
 
     let favorite = await this.favoriteModel.findOne({ userId, propertyId });
-    if (favorite)
-      throw new BadRequestException('Already added to your favorite');
+    if (favorite) throw new ConflictException('Already added to your favorite');
 
     favorite = new this.favoriteModel({
       userId,
@@ -64,7 +66,7 @@ export class FavoritesService {
         propertyId,
       })
       .populate('propertyId');
-    if (!favorite) throw new NotFoundException('Not in your favorite list');
+    if (!favorite) throw new NotFoundException('Not in user favorite list');
     return favorite;
   }
 }

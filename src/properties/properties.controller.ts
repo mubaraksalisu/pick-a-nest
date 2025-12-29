@@ -14,12 +14,14 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('properties')
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Post()
   create(@Body(ValidationPipe) createPropertyDto: CreatePropertyDto) {
     return this.propertiesService.create(createPropertyDto);

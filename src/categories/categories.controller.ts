@@ -16,6 +16,7 @@ import { Category } from './schemas/category.schema';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { AdminGuard } from 'src/shared/guards/admin.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('categories')
 export class CategoriesController {
@@ -23,6 +24,7 @@ export class CategoriesController {
 
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Post()
+  @ApiBearerAuth()
   create(
     @Body(ValidationPipe) createCategoryDto: CreateCategoryDto,
   ): Promise<Category> {
