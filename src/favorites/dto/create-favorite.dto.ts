@@ -9,12 +9,12 @@ export class CreateFavoriteDto {
 }
 
 export class CreateFavoriteResponseDto {
-  'userId': string;
-  'propertyId': string;
-  '_id': string;
-  'createdAt': Date;
-  'updatedAt': Date;
-  '__v': number;
+  userId: string;
+  propertyId: string;
+  _id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
 }
 
 export class MyFavoritesResponseDto {

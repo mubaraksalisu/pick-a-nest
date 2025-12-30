@@ -8,9 +8,19 @@ import { Model } from 'mongoose';
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
-  async findAll() {
-    const users = await this.userModel.find().select('-password');
-    return users;
+  async findAll({ page, limit }: { page: number; limit: number }) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.userModel.find().skip(skip).limit(limit).select('-password'),
+      this.userModel.countDocuments(),
+    ]);
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string) {
