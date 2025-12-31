@@ -114,49 +114,47 @@ export class CreatePropertyDto {
   propertySize: string;
 }
 
-export class CreatePropertyResponseDto {
-  '_id': '69524fa190c845b73b270f21';
-  'title': 'Duplex';
-  'description': 'duplex for a family of 4';
-  'address': 'kofar ruwa';
-  'city': 'kano';
-  'state': 'kano';
-  'price': 2000000;
-  'transactionType': 'rent';
-  'bedroom': 4;
-  'bathroom': 5;
-  'livingRoom': 2;
-  'parkingSpace': 2;
-  'pool': 0;
-  'ownerId': {
-    _id: '694fc52b6e6b4425b2fef6e8';
-    firstName: 'mubarak';
-    lastName: 'salisu';
-    email: 'marksmanl619@gmail.com';
-    role: 'admin';
-    phone: '08069245966';
-    active: true;
-    imageUrl: 'string';
-    createdAt: '2025-12-27T11:38:19.557Z';
-    updatedAt: '2025-12-27T11:38:19.557Z';
-    __v: 0;
+export class PropertyResponseDto {
+  _id: string;
+  title: string;
+  description: string;
+  address: string;
+  city: string;
+  state: string;
+  price: number;
+  transactionType: string;
+  bedroom: number;
+  bathroom: number;
+  livingRoom: number;
+  parkingSpace: number;
+  pool: number;
+  ownerId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    phone: string;
+    active: boolean;
+    imageUrl: string;
+    createdAt: Date;
+    updatedAt: Date;
+    __v: number;
   };
-  'categoryId': {
-    _id: '69524c834b8223e4ca70fb97';
-    name: 'House';
-    description: 'A whole family home';
-    icon: 'home';
-    createdAt: '2025-12-29T09:40:19.754Z';
-    updatedAt: '2025-12-29T09:40:19.754Z';
-    __v: 0;
+  categoryId: {
+    _id: string;
+    name: string;
+    description: string;
+    icon: string;
+    createdAt: Date;
+    updatedAt: Date;
+    __v: number;
   };
-  'status': 'available';
-  'media': [
-    'https://www.bhg.com/thmb/TD9qUnFen4PBLDuB2hn9yhGXPv8=/1866x0/filters:no_upscale():strip_icc()/white-house-a-frame-section-c0a4a3b3-e722202f114e4aeea4370af6dbb4312b.jpg',
-  ];
-  'rentDuration': 'yearly';
-  'propertySize': '100m square';
-  'createdAt': '2025-12-29T09:53:37.334Z';
-  'updatedAt': '2025-12-29T09:53:37.334Z';
-  '__v': 0;
+  status: string;
+  media: string[];
+  rentDuration: string;
+  propertySize: string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
 }

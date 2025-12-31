@@ -6,6 +6,7 @@ import { Property } from './schemas/property.schema';
 import { Model, Types } from 'mongoose';
 import { User } from 'src/users/schemas/user.schema';
 import { Category } from 'src/categories/schemas/category.schema';
+import { GetPropertiesResponseDto } from './dto/get-property-response.dto';
 
 @Injectable()
 export class PropertiesService {
@@ -39,12 +40,27 @@ export class PropertiesService {
     return populatedProperty;
   }
 
-  async findAll() {
-    return await this.propertyModel
-      .find()
-      .populate({ path: 'ownerId', select: '-password' })
-      .populate('categoryId')
-      .sort('_id');
+  async findAll({ limit, page }) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.propertyModel
+        .find()
+        .skip(skip)
+        .limit(limit)
+        .populate({ path: 'ownerId', select: '-password' })
+        .populate('categoryId')
+        .sort('_id'),
+
+      this.propertyModel.countDocuments(),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string) {
