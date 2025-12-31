@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiExcludeController } from '@nestjs/swagger';
 import {
   DiskHealthIndicator,
   HealthCheck,
@@ -7,6 +8,7 @@ import {
   MongooseHealthIndicator,
 } from '@nestjs/terminus';
 
+@ApiExcludeController()
 @Controller('health')
 export class HealthController {
   constructor(
