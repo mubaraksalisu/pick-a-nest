@@ -15,10 +15,10 @@ export class StatesService {
 
   async create(createStateDto: CreateStateDto): Promise<State> {
     let state = await this.stateModel.findOne({ name: createStateDto.name });
-    if (!state)
+    if (state)
       throw new BadRequestException('State with the same name already exist');
 
-    state = await this.stateModel.create({ ...CreateStateDto });
+    state = await this.stateModel.create({ ...createStateDto });
     return state;
   }
 
@@ -39,7 +39,9 @@ export class StatesService {
       throw new NotFoundException('No state was found with the provided id');
 
     if (updateStateDto.name) {
-      state = await this.stateModel.findOne({ name: updateStateDto.name });
+      state = await this.stateModel.findOne({
+        name: updateStateDto.name,
+      });
       if (!state)
         throw new BadRequestException('State with the same name already exist');
     }
