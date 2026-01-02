@@ -17,6 +17,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { HttpExceptionFilter } from './shared/filters/httpException.filter';
+import { AgentReviewsModule } from './agent-reviews/agent-reviews.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { HttpExceptionFilter } from './shared/filters/httpException.filter';
     HomeModule,
     HealthModule,
     TerminusModule,
+    AgentReviewsModule,
   ],
   providers: [
     {
