@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,8 +11,8 @@ import { PropertyReview } from './schemas/property-review.schema';
 import { Model } from 'mongoose';
 import { User } from 'src/users/schemas/user.schema';
 import { Property } from 'src/properties/schemas/property.schema';
-import { QueryParams } from './interfaces/query-params.interface';
 import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
+import { FindAllQueryParamsDto } from './dto/find-all-query-params.dto';
 
 @Injectable()
 export class PropertyReviewsService {
@@ -42,7 +43,7 @@ export class PropertyReviewsService {
       propertyId,
     });
     if (propertyReview)
-      throw new BadRequestException('User already reviewed property');
+      throw new ConflictException('User already reviewed property');
 
     propertyReview = new this.propertyReviewModel({
       ...createPropertyReviewDto,
@@ -50,11 +51,10 @@ export class PropertyReviewsService {
     return await propertyReview.save();
   }
 
-  async findAll(
-    userId?: string,
-    propertyId?: string,
-  ): Promise<PropertyReview[]> {
-    const filter: QueryParams = {} as QueryParams;
+  async findAll(queryParams: FindAllQueryParamsDto) {
+    const { userId, propertyId, page, limit } = queryParams;
+    const filter: any = {};
+    const skip = (page - 1) * limit;
 
     if (userId) {
       if (!isValidObjectId(userId))
@@ -68,14 +68,23 @@ export class PropertyReviewsService {
       filter.propertyId = propertyId;
     }
 
-    const propertyReview = await this.propertyReviewModel.find(filter);
-    return propertyReview;
+    const [data, total] = await Promise.all([
+      this.propertyReviewModel.find(filter).skip(skip).limit(limit),
+      this.propertyReviewModel.countDocuments(filter),
+    ]);
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: string): Promise<PropertyReview> {
     const propertyReview = await this.propertyReviewModel.findById(id);
     if (!propertyReview)
-      throw new NotFoundException('No review with the provided id');
+      throw new NotFoundException('No property review with the provided id');
     return propertyReview;
   }
 
