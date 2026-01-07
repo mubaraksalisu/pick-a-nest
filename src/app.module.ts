@@ -18,6 +18,7 @@ import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { HttpExceptionFilter } from './shared/filters/httpException.filter';
 import { AgentReviewsModule } from './agent-reviews/agent-reviews.module';
+import { RefreshTokenModule } from './refresh-token/refresh-token.module';
 
 @Module({
   imports: [
@@ -54,7 +55,7 @@ import { AgentReviewsModule } from './agent-reviews/agent-reviews.module';
           format: winston.format.json(),
         }),
       ],
-      exitOnError: false, // prevent Winston from exiting after logging
+      exitOnError: true, // prevent Winston from exiting after logging
     }),
     FavoritesModule,
     UsersModule,
@@ -68,6 +69,7 @@ import { AgentReviewsModule } from './agent-reviews/agent-reviews.module';
     HealthModule,
     TerminusModule,
     AgentReviewsModule,
+    RefreshTokenModule,
   ],
   providers: [
     {

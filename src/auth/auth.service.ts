@@ -6,11 +6,15 @@ import { User } from '../users/schemas/user.schema';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { RefreshTokenService } from 'src/refresh-token/refresh-token.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
+    private refreshTokenService: RefreshTokenService,
+    private configService: ConfigService,
     @InjectModel(User.name) private userModel: Model<User>,
   ) {}
 
@@ -25,7 +29,21 @@ export class AuthService {
 
   async login(user: any) {
     const payload = { sub: user._id, role: user.role, email: user.email };
-    return { access_token: this.jwtService.sign(payload) };
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get('REFRESH_EXPIRES_IN'),
+    });
+
+    this.refreshTokenService.createRefreshToken(
+      user._id,
+      refreshToken,
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days matching .env REFRESH_EXPIRES_IN
+    );
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get('ACCESS_EXPIRES_IN'),
+    });
+
+    return { accessToken, refreshToken };
   }
 
   async register(createUserDto: CreateUserDto) {

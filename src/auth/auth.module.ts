@@ -9,6 +9,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from 'src/users/schemas/user.schema';
+import { RefreshTokenModule } from 'src/refresh-token/refresh-token.module';
 
 @Module({
   imports: [
@@ -16,13 +17,11 @@ import { User, UserSchema } from 'src/users/schemas/user.schema';
     ConfigModule,
     PassportModule,
     UsersModule,
+    RefreshTokenModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('EXPIRES_IN'),
-        },
       }),
       inject: [ConfigService],
     }),
