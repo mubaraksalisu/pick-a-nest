@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
@@ -33,7 +37,7 @@ export class AuthService {
       expiresIn: this.configService.get('REFRESH_EXPIRES_IN'),
     });
 
-    this.refreshTokenService.createRefreshToken(
+    await this.refreshTokenService.createToken(
       user._id,
       refreshToken,
       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days matching .env REFRESH_EXPIRES_IN
@@ -57,18 +61,31 @@ export class AuthService {
       ...createUserDto,
       password: encryptedPassword,
     });
-    const savedUser = await user.save();
+    const { password, ...newUser } = (await user.save()).toObject();
 
-    const payload = {
-      _id: savedUser._id,
-      email: savedUser.email,
-      role: savedUser.role,
-    };
+    const { accessToken, refreshToken } = await this.login(newUser);
 
-    const authToken = this.jwtService.sign(payload);
+    return { accessToken, refreshToken, user: newUser };
+  }
 
-    const userObject = savedUser.toObject();
-    const { password, ...result } = userObject;
-    return { authToken, user: result };
+  async refresh(token: string) {
+    try {
+      const payload = await this.jwtService.verify(token);
+
+      const hashedToken = await this.refreshTokenService.validateToken(
+        payload.sub,
+        token,
+      );
+      if (!hashedToken)
+        throw new UnauthorizedException('Invalid refresh token');
+
+      await this.refreshTokenService.revokeToken(hashedToken._id as string);
+
+      const user = await this.userModel.findById(payload.sub);
+
+      return this.login(user);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 }

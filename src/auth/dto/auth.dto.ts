@@ -19,7 +19,8 @@ export class AuthPayloadDto {
 }
 
 export class LoginDto {
-  access_token: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export class Profile {
@@ -37,6 +38,11 @@ export class Profile {
 }
 
 export class RegisterationDto {
-  access_token: string;
+  accessToken: string;
+  refreshToken: string;
   user: Profile;
+}
+
+export class RefreshDto {
+  refreshToken: string;
 }

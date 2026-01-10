@@ -15,6 +15,7 @@ import { JwtAuthGuard } from './guards/jwt.guard';
 import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
@@ -26,6 +27,7 @@ import {
   AuthPayloadDto,
   LoginDto,
   Profile,
+  RefreshDto,
   RegisterationDto,
 } from './dto/auth.dto';
 
@@ -71,5 +73,17 @@ export class AuthController {
   })
   profile(@Req() req: Request) {
     return req.user;
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Create new refresh and access token' })
+  @ApiCreatedResponse({
+    description: 'Return new access and refresh tokens',
+    type: LoginDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Invalid refresh token' })
+  @ApiBody({ type: RefreshDto })
+  refresh(@Body('refreshToken') token: string) {
+    return this.authService.refresh(token);
   }
 }
