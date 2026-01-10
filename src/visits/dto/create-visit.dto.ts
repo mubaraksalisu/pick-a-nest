@@ -18,7 +18,7 @@ export enum VisitStatus {
 export class CreateVisitDto {
   @IsMongoId()
   @IsNotEmpty()
-  ownerId: string;
+  agentId: string;
 
   @IsMongoId()
   @IsNotEmpty()
@@ -30,11 +30,11 @@ export class CreateVisitDto {
 
   @IsDateString()
   @IsNotEmpty()
-  startIso: Date;
+  startIso: string;
 
   @IsDateString()
   @IsNotEmpty()
-  endIso: Date;
+  endIso: string;
 
   @IsString()
   @IsOptional()

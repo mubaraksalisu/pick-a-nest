@@ -1,9 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateVisitDto } from './dto/create-visit.dto';
+import { CreateVisitDto, VisitStatus } from './dto/create-visit.dto';
 import { UpdateVisitDto } from './dto/update-visit.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Visit } from './schemas/visit.schema';
@@ -11,6 +12,7 @@ import { Model } from 'mongoose';
 import { Property } from 'src/properties/schemas/property.schema';
 import { User } from 'src/users/schemas/user.schema';
 import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
+import * as luxon from 'luxon';
 
 @Injectable()
 export class VisitsService {
@@ -21,39 +23,54 @@ export class VisitsService {
   ) {}
 
   async create(createVisitDto: CreateVisitDto): Promise<Visit> {
-    const { propertyId, ownerId, clientId } = createVisitDto;
+    const {
+      propertyId,
+      agentId,
+      clientId,
+      startIso,
+      endIso,
+      idempotencyKey,
+      note,
+      status,
+    } = createVisitDto;
 
-    if (!isValidObjectId(propertyId))
-      throw new BadRequestException('Invalid propertyId');
+    if (idempotencyKey) {
+      const existing = await this.visitModel.findOne({ idempotencyKey });
+      if (existing) return existing;
+    }
 
-    if (!isValidObjectId(ownerId))
-      throw new BadRequestException('Invalid ownerId');
+    await this.confirmIdsIndatabase(propertyId, agentId, clientId);
 
-    if (!isValidObjectId(clientId))
-      throw new BadRequestException('Invalid clientId');
+    const start = luxon.DateTime.fromISO(startIso).toUTC();
+    const end = luxon.DateTime.fromISO(endIso).toUTC();
+    this.assertValidWindow(start, end);
 
-    const property = await this.propertyModel.findById(propertyId);
-    if (!property)
-      throw new BadRequestException(
-        'No property with the provided propertyId found',
-      );
+    const overlap = await this.visitModel.findOne({
+      status: { $ne: VisitStatus.CANCELED },
+      deletedAt: null,
+      startUtc: { $lt: end.toJSDate() },
+      endUtc: { $gt: start.toJSDate() },
+    });
+    if (overlap)
+      throw new ConflictException('Time slot overlaps with existing visit');
 
-    const owner = await this.userModel.findById(ownerId);
-    if (!owner)
-      throw new BadRequestException('No user with the provided ownerId found');
-
-    const client = await this.userModel.findById(clientId);
-    if (!client)
-      throw new BadRequestException('No user with the provided clientId found');
-
-    const visit = new this.visitModel({ ...CreateVisitDto });
+    const visit = new this.visitModel({
+      agentId,
+      clientId,
+      propertyId,
+      idempotencyKey,
+      note,
+      status: status || VisitStatus.REQUESTING,
+      startUtc: start.toJSDate(),
+      endUtc: end.toJSDate(),
+    });
     return await visit.save();
   }
 
   async findAll(userId?: string, propertyId?: string): Promise<Visit[]> {
     const query = {} as any;
     if (userId) {
-      query.$or = [{ ownerId: userId }, { clientId: userId }];
+      query.$or = [{ agentId: userId }, { clientId: userId }];
     }
 
     if (propertyId) query.propertyId = propertyId;
@@ -72,16 +89,16 @@ export class VisitsService {
   }
 
   async update(id: string, updateVisitDto: UpdateVisitDto) {
-    const { ownerId, propertyId, clientId } = updateVisitDto;
+    const { agentId, propertyId, clientId } = updateVisitDto;
 
-    if (ownerId) {
-      if (!isValidObjectId(ownerId))
-        throw new BadRequestException('Invalid ownerId');
+    if (agentId) {
+      if (!isValidObjectId(agentId))
+        throw new BadRequestException('Invalid agentId');
 
-      const owner = await this.userModel.findById(ownerId);
-      if (!owner)
+      const agent = await this.userModel.findById(agentId);
+      if (!agent)
         throw new BadRequestException(
-          'No user with the provided ownerId found',
+          'No user with the provided agentId found',
         );
     }
 
@@ -120,5 +137,35 @@ export class VisitsService {
       throw new NotFoundException('No scheduled visit with the provided id');
 
     return visit;
+  }
+
+  private async confirmIdsIndatabase(
+    propertyId: string,
+    agentId: string,
+    clientId: string,
+  ) {
+    const property = await this.propertyModel.findById(propertyId);
+    if (!property)
+      throw new BadRequestException(
+        'No property with the provided propertyId found',
+      );
+
+    const agent = await this.userModel.findById(agentId);
+    if (!agent)
+      throw new BadRequestException('No user with the provided agentId found');
+
+    const client = await this.userModel.findById(clientId);
+    if (!client)
+      throw new BadRequestException('No user with the provided clientId found');
+  }
+
+  private assertValidWindow(start: luxon.DateTime, end: luxon.DateTime) {
+    if (!start.isValid || !end.isValid)
+      throw new BadRequestException('Invalid date format');
+    if (end <= start) throw new BadRequestException('End must be after start');
+    if (start < luxon.DateTime.utc())
+      throw new BadRequestException('Start must be in the future');
+    if (end.diff(start, 'hours').hours > 4)
+      throw new BadRequestException('Visit duration must be <= 4 hours');
   }
 }
