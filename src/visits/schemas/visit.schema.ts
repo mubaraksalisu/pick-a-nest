@@ -8,7 +8,7 @@ export class Visit extends Document {
     ref: 'User',
     required: true,
   })
-  ownerId: Types.ObjectId;
+  agentId: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
@@ -28,7 +28,19 @@ export class Visit extends Document {
     type: Date,
     required: true,
   })
-  visitDate: Date;
+  startUtc: Date;
+
+  @Prop({
+    type: Date,
+    required: true,
+  })
+  endUtc: Date;
+
+  @Prop({
+    type: String,
+    maxlength: 256,
+  })
+  notes?: string;
 
   @Prop({
     type: String,
@@ -36,6 +48,14 @@ export class Visit extends Document {
     default: 'requesting',
   })
   status: string;
+
+  @Prop({ type: String, unique: true, sparse: true })
+  idempotencyKey?: string;
+
+  @Prop({ type: Date })
+  deletedAt?: Date;
 }
 
 export const VisitSchema = SchemaFactory.createForClass(Visit);
+VisitSchema.index({ propertyId: 1, startUtc: 1 });
+VisitSchema.index({ clientId: 1, startUtc: 1 });
