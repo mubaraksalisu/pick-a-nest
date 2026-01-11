@@ -88,55 +88,50 @@ export class VisitsService {
     return visit;
   }
 
-  async update(id: string, updateVisitDto: UpdateVisitDto) {
-    const { agentId, propertyId, clientId } = updateVisitDto;
+  async reschedule(id: string, updateVisitDto: UpdateVisitDto) {
+    const visit = await this.visitModel.findById(id);
+    if (!visit) throw new NotFoundException('No visit with the provided id');
 
-    if (agentId) {
-      if (!isValidObjectId(agentId))
-        throw new BadRequestException('Invalid agentId');
-
-      const agent = await this.userModel.findById(agentId);
-      if (!agent)
-        throw new BadRequestException(
-          'No user with the provided agentId found',
-        );
+    if (
+      ![
+        VisitStatus.REQUESTING.toString(),
+        VisitStatus.SCHEDULED.toString(),
+      ].includes(visit.status)
+    ) {
+      throw new BadRequestException(
+        'Only requesting/scheduled visits can be rescheduled',
+      );
     }
 
-    if (propertyId) {
-      if (!isValidObjectId(propertyId))
-        throw new BadRequestException('Invalid propertyId');
+    const start = luxon.DateTime.fromISO(updateVisitDto.startIso).toUTC();
+    const end = luxon.DateTime.fromISO(updateVisitDto.endIso).toUTC();
+    this.assertValidWindow(start, end);
 
-      const property = await this.propertyModel.findById(propertyId);
-      if (!property)
-        throw new BadRequestException(
-          'No property with the provided propertyId found',
-        );
-    }
-
-    if (clientId) {
-      if (!isValidObjectId(clientId))
-        throw new BadRequestException('Invalid clientId');
-
-      const client = await this.userModel.findById(clientId);
-      if (!client)
-        throw new BadRequestException(
-          'No user with the provided clientId found',
-        );
-    }
-
-    const visit = await this.visitModel.findByIdAndUpdate(id, updateVisitDto, {
-      new: true,
+    const overlap = await this.visitModel.findOne({
+      propertyId: visit._id,
+      deletedAt: null,
+      _id: { $ne: id },
+      startUtc: { $lt: end.toJSDate() },
+      endUtc: { $gt: start.toJSDate() },
     });
+    if (overlap)
+      throw new ConflictException('Time slot overlaps with existing visit');
 
-    return visit;
+    visit.startUtc = start.toJSDate();
+    visit.endUtc = end.toJSDate();
+    if (updateVisitDto.note !== undefined) visit.notes = updateVisitDto.note;
+    visit.status = VisitStatus.REQUESTING;
+
+    return await visit.save();
   }
 
-  async remove(id: string) {
-    const visit = await this.visitModel.findByIdAndDelete(id);
+  async softDelete(id: string) {
+    const visit = await this.visitModel.findById(id);
     if (!visit)
       throw new NotFoundException('No scheduled visit with the provided id');
 
-    return visit;
+    visit.deletedAt = new Date();
+    return await visit.save();
   }
 
   private async confirmIdsIndatabase(
@@ -165,7 +160,10 @@ export class VisitsService {
     if (end <= start) throw new BadRequestException('End must be after start');
     if (start < luxon.DateTime.utc())
       throw new BadRequestException('Start must be in the future');
-    if (end.diff(start, 'hours').hours > 4)
+
+    const visitDuration = 2;
+
+    if (end.diff(start, 'hours').hours > visitDuration)
       throw new BadRequestException('Visit duration must be <= 4 hours');
   }
 }

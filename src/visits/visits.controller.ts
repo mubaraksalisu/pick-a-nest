@@ -8,24 +8,26 @@ import {
   Delete,
   UseGuards,
   Query,
+  ValidationPipe,
 } from '@nestjs/common';
 import { VisitsService } from './visits.service';
 import { CreateVisitDto } from './dto/create-visit.dto';
 import { UpdateVisitDto } from './dto/update-visit.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+// @ApiBearerAuth()
+// @UseGuards(JwtAuthGuard)
 @Controller('visits')
 export class VisitsController {
   constructor(private readonly visitsService: VisitsService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Body() createVisitDto: CreateVisitDto) {
+  create(@Body(ValidationPipe) createVisitDto: CreateVisitDto) {
     return this.visitsService.create(createVisitDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get()
   findAll(
     @Query('userId') userId?: string,
@@ -34,21 +36,24 @@ export class VisitsController {
     return this.visitsService.findAll(userId, propertyId);
   }
 
-  @UseGuards(JwtAuthGuard, ObjectIdGuard)
+  @UseGuards(ObjectIdGuard)
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.visitsService.findOne(id);
   }
 
-  @UseGuards(JwtAuthGuard, ObjectIdGuard)
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateVisitDto: UpdateVisitDto) {
-    return this.visitsService.update(id, updateVisitDto);
+  @UseGuards(ObjectIdGuard)
+  @Patch('reschedule/:id')
+  reschedule(
+    @Param('id') id: string,
+    @Body(ValidationPipe) updateVisitDto: UpdateVisitDto,
+  ) {
+    return this.visitsService.reschedule(id, updateVisitDto);
   }
 
-  @UseGuards(JwtAuthGuard, ObjectIdGuard)
+  @UseGuards(ObjectIdGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.visitsService.remove(id);
+  softDelete(@Param('id') id: string) {
+    return this.visitsService.softDelete(id);
   }
 }

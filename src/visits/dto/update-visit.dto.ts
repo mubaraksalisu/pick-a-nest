@@ -1,4 +1,22 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateVisitDto } from './create-visit.dto';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
-export class UpdateVisitDto extends PartialType(CreateVisitDto) {}
+export class UpdateVisitDto {
+  @IsDateString()
+  @IsNotEmpty()
+  startIso: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  endIso: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(256)
+  note: string;
+}
