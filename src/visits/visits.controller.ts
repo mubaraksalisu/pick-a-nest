@@ -24,7 +24,10 @@ import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -53,6 +56,20 @@ export class VisitsController {
 
   @UseGuards(ObjectIdGuard)
   @Patch(':id/change-status')
+  @ApiOperation({ summary: 'Change status of an existing visit record' })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'id of the visit record to modify',
+  })
+  @ApiNotFoundResponse({ description: 'No visit with the provided id' })
+  @ApiBadRequestResponse({
+    description: 'Invalid transition from one status to another',
+  })
+  @ApiOkResponse({
+    description: 'Update visit status and return updated visit record',
+    type: VisitResponseDto,
+  })
   changeStatus(
     @Param('id') id: string,
     @Body(ValidationPipe) changeStatusDto: ChangeStatusDto,
