@@ -52,6 +52,15 @@ export class VisitsController {
     return this.visitsService.reschedule(id, updateVisitDto);
   }
 
+  @Get('property/:propertyId')
+  propertyVisitList(
+    @Param('propertyId') propertyId: string,
+    @Query('fromIso') fromIso: string,
+    @Query('toIso') toIso: string,
+  ) {
+    return this.visitsService.propertyVisitList(propertyId, fromIso, toIso);
+  }
+
   @Patch(':id/cancel')
   cancel(@Param('id') id: string) {
     return this.visitsService.cancel(id);

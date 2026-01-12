@@ -139,6 +139,25 @@ export class VisitsService {
     return await visit.save();
   }
 
+  async propertyVisitList(
+    propertyId: string,
+    fromIso?: string,
+    toIso?: string,
+  ) {
+    const query: any = { propertyId, deletedAt: null };
+
+    if (fromIso && toIso) {
+      query.startUtc = {
+        $lt: luxon.DateTime.fromISO(toIso).toUTC().toJSDate(),
+      };
+      query.endUtc = {
+        $gt: luxon.DateTime.fromISO(fromIso).toUTC().toJSDate(),
+      };
+    }
+
+    return await this.visitModel.find(query).sort('startUtc');
+  }
+
   async cancel(id: string): Promise<Visit> {
     return this.changeStatus(id, { status: VisitStatus.CANCELED });
   }

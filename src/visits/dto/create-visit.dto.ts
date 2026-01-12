@@ -52,5 +52,8 @@ export class CreateVisitDto {
 }
 
 export class ChangeStatusDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
   status: string;
 }
