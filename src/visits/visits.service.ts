@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateVisitDto, VisitStatus } from './dto/create-visit.dto';
+import {
+  ChangeStatusDto,
+  CreateVisitDto,
+  VisitStatus,
+} from './dto/create-visit.dto';
 import { UpdateVisitDto } from './dto/update-visit.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Visit } from './schemas/visit.schema';
@@ -67,28 +71,38 @@ export class VisitsService {
     return await visit.save();
   }
 
-  async findAll(userId?: string, propertyId?: string): Promise<Visit[]> {
-    const query = {} as any;
-    if (userId) {
-      query.$or = [{ agentId: userId }, { clientId: userId }];
+  async changeStatus(
+    id: string,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<Visit> {
+    const visit = await this.visitModel.findById(id);
+    if (!visit) throw new NotFoundException('No visit with the provided id');
+
+    const allowed = {
+      [VisitStatus.REQUESTING]: [VisitStatus.CANCELED, VisitStatus.SCHEDULED],
+      [VisitStatus.SCHEDULED]: [VisitStatus.CANCELED, VisitStatus.COMPLETED],
+      [VisitStatus.CANCELED]: [],
+      [VisitStatus.COMPLETED]: [],
+    };
+
+    if (!allowed[visit.status].includes(changeStatusDto.status)) {
+      throw new BadRequestException(
+        `Invalid transition from ${visit.status} to ${changeStatusDto.status}`,
+      );
     }
 
-    if (propertyId) query.propertyId = propertyId;
-
-    const visits = await this.visitModel.find(query);
-
-    return visits;
+    visit.status = changeStatusDto.status;
+    return visit.save();
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Visit> {
     const visit = await this.visitModel.findById(id);
-    if (!visit)
-      throw new NotFoundException('No scheduled visit with the provided id');
+    if (!visit) throw new NotFoundException('No visit with the provided id');
 
     return visit;
   }
 
-  async reschedule(id: string, updateVisitDto: UpdateVisitDto) {
+  async reschedule(id: string, updateVisitDto: UpdateVisitDto): Promise<Visit> {
     const visit = await this.visitModel.findById(id);
     if (!visit) throw new NotFoundException('No visit with the provided id');
 
@@ -125,7 +139,11 @@ export class VisitsService {
     return await visit.save();
   }
 
-  async softDelete(id: string) {
+  async cancel(id: string): Promise<Visit> {
+    return this.changeStatus(id, { status: VisitStatus.CANCELED });
+  }
+
+  async softDelete(id: string): Promise<Visit> {
     const visit = await this.visitModel.findById(id);
     if (!visit)
       throw new NotFoundException('No scheduled visit with the provided id');

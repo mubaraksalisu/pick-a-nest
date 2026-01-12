@@ -11,7 +11,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { VisitsService } from './visits.service';
-import { CreateVisitDto } from './dto/create-visit.dto';
+import { ChangeStatusDto, CreateVisitDto } from './dto/create-visit.dto';
 import { UpdateVisitDto } from './dto/update-visit.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
@@ -28,12 +28,13 @@ export class VisitsController {
     return this.visitsService.create(createVisitDto);
   }
 
-  @Get()
-  findAll(
-    @Query('userId') userId?: string,
-    @Query('propertyId') propertyId?: string,
+  @UseGuards(ObjectIdGuard)
+  @Patch(':id/change-status')
+  changeStatus(
+    @Param('id') id: string,
+    @Body(ValidationPipe) changeStatusDto: ChangeStatusDto,
   ) {
-    return this.visitsService.findAll(userId, propertyId);
+    return this.visitsService.changeStatus(id, changeStatusDto);
   }
 
   @UseGuards(ObjectIdGuard)
@@ -43,12 +44,17 @@ export class VisitsController {
   }
 
   @UseGuards(ObjectIdGuard)
-  @Patch('reschedule/:id')
+  @Patch(':id/reschedule')
   reschedule(
     @Param('id') id: string,
     @Body(ValidationPipe) updateVisitDto: UpdateVisitDto,
   ) {
     return this.visitsService.reschedule(id, updateVisitDto);
+  }
+
+  @Patch(':id/cancel')
+  cancel(@Param('id') id: string) {
+    return this.visitsService.cancel(id);
   }
 
   @UseGuards(ObjectIdGuard)

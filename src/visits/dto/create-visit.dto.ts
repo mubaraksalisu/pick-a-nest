@@ -50,3 +50,7 @@ export class CreateVisitDto {
   @IsOptional()
   status: VisitStatus = VisitStatus.REQUESTING;
 }
+
+export class ChangeStatusDto {
+  status: string;
+}
