@@ -96,6 +96,27 @@ export class VisitsController {
 
   @UseGuards(ObjectIdGuard)
   @Patch(':id/reschedule')
+  @ApiOperation({
+    summary: 'Reschedule a visit by updating the visit record dates and note',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'id of the visit record to reschedule',
+  })
+  @ApiNotFoundResponse({ description: 'No visit with the provided id' })
+  @ApiBadRequestResponse({
+    description:
+      'Only requesting/scheduled visits can be rescheduled OR invalid dates provided',
+  })
+  @ApiConflictResponse({
+    description: 'Time slot overlaps with existing visit',
+  })
+  @ApiOkResponse({
+    description:
+      'Reschedules visit by updating visit dates and optionaly note and return the record',
+    type: VisitResponseDto,
+  })
   reschedule(
     @Param('id') id: string,
     @Body(ValidationPipe) updateVisitDto: UpdateVisitDto,
