@@ -79,6 +79,17 @@ export class VisitsController {
 
   @UseGuards(ObjectIdGuard)
   @Get(':id')
+  @ApiOperation({ summary: 'Get a visit record by id' })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'id of the visit record to get',
+  })
+  @ApiNotFoundResponse({ description: 'No visit with the provided id' })
+  @ApiOkResponse({
+    description: 'Return visit record with the provided id',
+    type: VisitResponseDto,
+  })
   findOne(@Param('id') id: string) {
     return this.visitsService.findOne(id);
   }
