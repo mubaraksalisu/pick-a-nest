@@ -28,6 +28,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -125,6 +126,29 @@ export class VisitsController {
   }
 
   @Get('property/:propertyId')
+  @ApiOperation({ summary: 'Get a list of visits associated to a property' })
+  @ApiParam({
+    name: 'propertyId',
+    type: String,
+    description: 'id of the property you want to get the visits of',
+  })
+  @ApiQuery({
+    name: 'fromIso',
+    type: String,
+    description: 'Visit duration start time filter',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'toIso',
+    type: String,
+    description: 'Visit duration end time filter',
+    required: false,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid propertyId parameter' })
+  @ApiOkResponse({
+    description: 'Return list of visits associated to the specified propertyId',
+    type: [VisitResponseDto],
+  })
   propertyVisitList(
     @Param('propertyId') propertyId: string,
     @Query('fromIso') fromIso?: string,
