@@ -13,7 +13,7 @@ export class ObjectIdGuard implements CanActivate {
     const id = request.params.id;
 
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid ID format');
+      throw new BadRequestException('Invalid id parameter format');
     }
 
     return true;

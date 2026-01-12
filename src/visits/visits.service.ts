@@ -144,6 +144,8 @@ export class VisitsService {
     fromIso?: string,
     toIso?: string,
   ) {
+    isValidObjectId(propertyId);
+
     const query: any = { propertyId, deletedAt: null };
 
     if (fromIso && toIso) {
@@ -201,6 +203,6 @@ export class VisitsService {
     const visitDuration = 2;
 
     if (end.diff(start, 'hours').hours > visitDuration)
-      throw new BadRequestException('Visit duration must be <= 4 hours');
+      throw new BadRequestException('Visit duration must be <= 2 hours');
   }
 }

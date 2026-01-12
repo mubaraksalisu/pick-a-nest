@@ -11,19 +11,42 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { VisitsService } from './visits.service';
-import { ChangeStatusDto, CreateVisitDto } from './dto/create-visit.dto';
+import {
+  ChangeStatusDto,
+  CreateVisitDto,
+  VisitResponseDto,
+} from './dto/create-visit.dto';
 import { UpdateVisitDto } from './dto/update-visit.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 
-// @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+@ApiTags('visits')
 @Controller('visits')
 export class VisitsController {
   constructor(private readonly visitsService: VisitsService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a visit request' })
+  @ApiBadRequestResponse({
+    description: 'If invalid IDs, dates, or duration provided',
+  })
+  @ApiConflictResponse({
+    description: 'Time slot overlaps with existing visit',
+  })
+  @ApiCreatedResponse({
+    description: 'Create and return a visit document',
+    type: VisitResponseDto,
+  })
   create(@Body(ValidationPipe) createVisitDto: CreateVisitDto) {
     return this.visitsService.create(createVisitDto);
   }
@@ -55,8 +78,8 @@ export class VisitsController {
   @Get('property/:propertyId')
   propertyVisitList(
     @Param('propertyId') propertyId: string,
-    @Query('fromIso') fromIso: string,
-    @Query('toIso') toIso: string,
+    @Query('fromIso') fromIso?: string,
+    @Query('toIso') toIso?: string,
   ) {
     return this.visitsService.propertyVisitList(propertyId, fromIso, toIso);
   }

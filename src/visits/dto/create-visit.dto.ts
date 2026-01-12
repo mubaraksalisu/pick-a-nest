@@ -57,3 +57,18 @@ export class ChangeStatusDto {
   @MaxLength(50)
   status: string;
 }
+
+export class VisitResponseDto {
+  '_id': string;
+  'agentId': string;
+  'clientId': string;
+  'propertyId': string;
+  'startUtc': string;
+  'endUtc': string;
+  'status': string;
+  'idempotencyKey': string;
+  'createdAt': Date;
+  'updatedAt': Date;
+  '__v': number;
+  'notes': string;
+}
