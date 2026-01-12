@@ -166,8 +166,7 @@ export class VisitsService {
 
   async softDelete(id: string): Promise<Visit> {
     const visit = await this.visitModel.findById(id);
-    if (!visit)
-      throw new NotFoundException('No scheduled visit with the provided id');
+    if (!visit) throw new NotFoundException('No visit with the provided id');
 
     visit.deletedAt = new Date();
     return await visit.save();

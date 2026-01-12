@@ -157,13 +157,40 @@ export class VisitsController {
     return this.visitsService.propertyVisitList(propertyId, fromIso, toIso);
   }
 
+  @UseGuards(ObjectIdGuard)
   @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Update visit status to cancel' })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'id of the visit record to modify',
+  })
+  @ApiNotFoundResponse({ description: 'No visit with the provided id' })
+  @ApiOkResponse({
+    description:
+      'Update visit status to cancel and return updated visit record',
+    type: VisitResponseDto,
+  })
   cancel(@Param('id') id: string) {
     return this.visitsService.cancel(id);
   }
 
   @UseGuards(ObjectIdGuard)
   @Delete(':id')
+  @ApiOperation({ summary: 'Soft delete visit by id' })
+  @ApiNotFoundResponse({
+    description: 'No visit with the provided id',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'id of the visit record to soft delete',
+  })
+  @ApiOkResponse({
+    description:
+      'Mark visit record as deleted by setting deletedAt property and returning the record',
+    type: VisitResponseDto,
+  })
   softDelete(@Param('id') id: string) {
     return this.visitsService.softDelete(id);
   }
