@@ -51,14 +51,10 @@ export class AgentReviewsService {
     const skip = (page - 1) * limit;
 
     if (userId) {
-      if (!isValidObjectId(userId))
-        throw new BadRequestException('Invalid userId queryString');
       filter.userId = userId;
     }
 
     if (agentId) {
-      if (!isValidObjectId(agentId))
-        throw new BadRequestException('Invalid agentId queryString');
       filter.agentId = agentId;
     }
 
