@@ -18,6 +18,8 @@ describe('AgentReviewsService', () => {
 
   // Add static methods to the mock constructor
   mockAgentReviewModel.findOne = jest.fn();
+  mockAgentReviewModel.find = jest.fn();
+  mockAgentReviewModel.countDocuments = jest.fn();
 
   const mockUser = {_id: "u1"}
 
@@ -92,4 +94,22 @@ describe('AgentReviewsService', () => {
       expect(usersService.findOne).toHaveBeenCalledTimes(2);
     })
   });
+
+  describe("findAll", () => {
+    it("Should return pagenated review", async () => {
+      model.find.mockReturnValue({
+    skip: jest.fn().mockReturnValue({
+      limit: jest.fn().mockResolvedValue([mockReviewDto]),
+    }),
+  });
+      model.countDocuments.mockResolvedValue(1)
+
+      const result = await service.findAll({page: 1, limit: 10})
+      expect(result.data).toEqual([mockReviewDto])
+      expect(result.total).toBe(1)
+      expect(result.totalPage).toBe(1)
+      expect(result.page).toBe(1)
+      expect(result.limit).toBe(10)
+    })
+  })
 });
