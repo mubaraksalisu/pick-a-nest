@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AgentReviewsService } from './agent-reviews.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { UsersService } from 'src/users/users.service';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { AgentReview } from './schema/agent-review.schema';
 
 describe('AgentReviewsService', () => {
@@ -20,15 +24,16 @@ describe('AgentReviewsService', () => {
   mockAgentReviewModel.findOne = jest.fn();
   mockAgentReviewModel.find = jest.fn();
   mockAgentReviewModel.countDocuments = jest.fn();
+  mockAgentReviewModel.findById = jest.fn();
 
-  const mockUser = {_id: "u1"}
+  const mockUser = { _id: 'u1' };
 
   const mockReviewDto = {
-      userId: 'u1',
-      agentId: 'a1',
-      rating: 4,
-      comment: 'c1',
-    };
+    userId: 'u1',
+    agentId: 'a1',
+    rating: 4,
+    comment: 'c1',
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -44,7 +49,7 @@ describe('AgentReviewsService', () => {
 
     service = module.get<AgentReviewsService>(AgentReviewsService);
     usersService = module.get<UsersService>(UsersService);
-    model = module.get(getModelToken(AgentReview.name))
+    model = module.get(getModelToken(AgentReview.name));
   });
 
   afterEach(() => {
@@ -83,33 +88,50 @@ describe('AgentReviewsService', () => {
       );
     });
 
-    it("Create and save new review", async () => {
-      (usersService.findOne as jest.Mock).mockResolvedValue(mockUser)
-      model.findOne.mockResolvedValue(null)
+    it('Create and save new review', async () => {
+      (usersService.findOne as jest.Mock).mockResolvedValue(mockUser);
+      model.findOne.mockResolvedValue(null);
 
-      const result = await service.create(mockReviewDto)
+      const result = await service.create(mockReviewDto);
 
       expect(result).toBeDefined();
       expect(result.userId).toEqual(mockReviewDto.userId);
       expect(usersService.findOne).toHaveBeenCalledTimes(2);
-    })
+    });
   });
 
-  describe("findAll", () => {
-    it("Should return pagenated review", async () => {
+  describe('findAll', () => {
+    it('Should return pagenated reviews', async () => {
       model.find.mockReturnValue({
-    skip: jest.fn().mockReturnValue({
-      limit: jest.fn().mockResolvedValue([mockReviewDto]),
-    }),
-  });
-      model.countDocuments.mockResolvedValue(1)
+        skip: jest.fn().mockReturnValue({
+          limit: jest.fn().mockResolvedValue([mockReviewDto]),
+        }),
+      });
+      model.countDocuments.mockResolvedValue(1);
 
-      const result = await service.findAll({page: 1, limit: 10})
-      expect(result.data).toEqual([mockReviewDto])
-      expect(result.total).toBe(1)
-      expect(result.totalPage).toBe(1)
-      expect(result.page).toBe(1)
-      expect(result.limit).toBe(10)
-    })
-  })
+      const result = await service.findAll({ page: 1, limit: 10 });
+      expect(result.data).toEqual([mockReviewDto]);
+      expect(result.total).toBe(1);
+      expect(result.totalPage).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
+  });
+
+  describe('findOne', () => {
+    it('Should return NotFoundException if no review with the provided id', async () => {
+      model.findById.mockResolvedValue(null);
+
+      await expect(service.findOne('r1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('Should return review with the given id', async () => {
+      model.findById.mockResolvedValue(mockReviewDto);
+
+      const result = await service.findOne('r1');
+
+      expect(result).toBeDefined();
+      expect(result).toEqual(mockReviewDto);
+    });
+  });
 });
