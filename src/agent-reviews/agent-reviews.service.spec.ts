@@ -25,6 +25,7 @@ describe('AgentReviewsService', () => {
   mockAgentReviewModel.find = jest.fn();
   mockAgentReviewModel.countDocuments = jest.fn();
   mockAgentReviewModel.findById = jest.fn();
+  mockAgentReviewModel.findByIdAndDelete = jest.fn();
 
   const mockUser = { _id: 'u1' };
 
@@ -132,6 +133,35 @@ describe('AgentReviewsService', () => {
 
       expect(result).toBeDefined();
       expect(result).toEqual(mockReviewDto);
+    });
+  });
+
+  describe('update', () => {
+    it('Should return NotFoundException if no review with the provided id', async () => {
+      model.findById.mockResolvedValue(null);
+
+      await expect(
+        service.update('r1', { rating: 3, comment: 'update' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('Should update and save review', async () => {
+      const updateDto = { rating: 5, comment: 'new' };
+      const reviewId = 'r1';
+      const mockExistingReview = {
+        _id: reviewId,
+        rating: 4,
+        comment: 'old',
+        save: jest.fn().mockResolvedValue({ _id: reviewId, ...updateDto }),
+      };
+      model.findById.mockResolvedValue(mockExistingReview);
+
+      const result = await service.update(reviewId, updateDto);
+
+      expect(result).toBeDefined();
+      expect(model.findById).toHaveBeenCalledWith(reviewId);
+      expect(result.rating).toBe(5);
+      expect(result.comment).toBe('new');
     });
   });
 });

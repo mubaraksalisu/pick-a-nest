@@ -1,4 +1,26 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateAgentReviewDto } from './create-agent-review.dto';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
-export class UpdateAgentReviewDto extends PartialType(CreateAgentReviewDto) {}
+export class UpdateAgentReviewDto {
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  @IsNotEmpty()
+  @IsOptional()
+  rating: number;
+
+  @IsString()
+  @MinLength(5)
+  @MaxLength(255)
+  @IsNotEmpty()
+  @IsOptional()
+  comment: string;
+}

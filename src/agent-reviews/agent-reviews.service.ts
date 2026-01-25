@@ -86,22 +86,6 @@ export class AgentReviewsService {
     if (!agentReview)
       throw new NotFoundException('No agent review with the provided id');
 
-    const { userId, agentId } = updateAgentReviewDto;
-
-    if (userId) {
-      const user = await this.userService.findOne(userId);
-      if (!user)
-        throw new BadRequestException('No user with the provided userId found');
-    }
-
-    if (agentId) {
-      const agent = await this.userService.findOne(agentId);
-      if (!agent)
-        throw new BadRequestException(
-          'No agent with the provided propertyId found',
-        );
-    }
-
     Object.assign(agentReview, updateAgentReviewDto);
     await agentReview.save();
 
