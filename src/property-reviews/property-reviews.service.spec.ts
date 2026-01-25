@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { PropertyReview } from './schemas/property-review.schema';
 import { PropertiesService } from 'src/properties/properties.service';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 
 describe('PropertyReviewsService', () => {
   let service: PropertyReviewsService;
@@ -16,6 +17,20 @@ describe('PropertyReviewsService', () => {
     this.data = dto;
     this.save = jest.fn().mockResolvedValue({ _id: 'id', ...dto });
   }
+
+  // Add static methods to the mock constructor
+  mockPropertyReviewModel.findOne = jest.fn();
+
+  const mockReviewDto = {
+    userId: 'u1',
+    propertyId: 'a1',
+    rating: 4,
+    comment: 'c1',
+  };
+
+  const mockUser = { _id: 'u1' };
+
+  const mockProperty = { _id: 'p1' };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -42,5 +57,49 @@ describe('PropertyReviewsService', () => {
 
   it('Should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('Should throw BadRequestException if user not found', async () => {
+      (usersService.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.create(mockReviewDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('Should throw BadRequestException if property not found', async () => {
+      (propertiesService.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.create(mockReviewDto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('Should throw ConflictException if user already reviewed property', async () => {
+      (usersService.findOne as jest.Mock).mockResolvedValue(mockUser);
+      (propertiesService.findOne as jest.Mock).mockResolvedValue(mockProperty);
+      model.findOne.mockResolvedValue({ _id: 'r1' });
+
+      await expect(service.create(mockReviewDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('Should create and save new review', async () => {
+      (usersService.findOne as jest.Mock).mockResolvedValue(mockUser);
+      (propertiesService.findOne as jest.Mock).mockResolvedValue(mockProperty);
+      model.findOne.mockResolvedValue(null);
+
+      const result = await service.create(mockReviewDto);
+
+      expect(result).toBeDefined();
+      expect(usersService.findOne).toHaveBeenCalled();
+      expect(propertiesService.findOne).toHaveBeenCalled();
+      expect(result.userId).toEqual(mockReviewDto.userId);
+      expect(result.propertyId).toEqual(mockReviewDto.propertyId);
+      expect(result.rating).toEqual(mockReviewDto.rating);
+      expect(result.comment).toEqual(mockReviewDto.comment);
+    });
   });
 });
