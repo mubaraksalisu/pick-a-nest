@@ -13,14 +13,16 @@ import { User } from 'src/users/schemas/user.schema';
 import { Property } from 'src/properties/schemas/property.schema';
 import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
 import { FindAllQueryParamsDto } from './dto/find-all-query-params.dto';
+import { UsersService } from 'src/users/users.service';
+import { PropertiesService } from 'src/properties/properties.service';
 
 @Injectable()
 export class PropertyReviewsService {
   constructor(
     @InjectModel(PropertyReview.name)
     private propertyReviewModel: Model<PropertyReview>,
-    @InjectModel(User.name) private userModel: Model<User>,
-    @InjectModel(Property.name) private propertyModel: Model<Property>,
+    private usersService: UsersService,
+    private propertyService: PropertiesService,
   ) {}
 
   async create(
@@ -28,11 +30,11 @@ export class PropertyReviewsService {
   ): Promise<PropertyReview> {
     const { userId, propertyId } = createPropertyReviewDto;
 
-    const user = await this.userModel.findById(userId);
+    const user = await this.usersService.findOne(userId);
     if (!user)
       throw new BadRequestException('No user with the provided userId found');
 
-    const property = await this.propertyModel.findById(propertyId);
+    const property = await this.propertyService.findOne(propertyId);
     if (!property)
       throw new BadRequestException(
         'No property with the provided propertyId found',
