@@ -164,4 +164,21 @@ describe('AgentReviewsService', () => {
       expect(result.comment).toBe('new');
     });
   });
+
+  describe('remove', () => {
+    it('Should return NotFoundException if no review with the provided id', async () => {
+      model.findByIdAndDelete.mockResolvedValue(null);
+
+      await expect(service.remove('r1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('Should delete and return the deleted review', async () => {
+      model.findByIdAndDelete.mockResolvedValue(mockReviewDto);
+
+      const result = await service.remove('r1');
+
+      expect(result).toBeDefined();
+      expect(result).toEqual(mockReviewDto);
+    });
+  });
 });
