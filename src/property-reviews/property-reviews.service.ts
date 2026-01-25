@@ -96,22 +96,6 @@ export class PropertyReviewsService {
     if (!propertyReview)
       throw new NotFoundException('No property review with the provided id');
 
-    const { userId, propertyId } = updatePropertyReviewDto;
-
-    if (userId) {
-      const user = await this.userModel.findById(userId);
-      if (!user)
-        throw new BadRequestException('No user with the provided userId found');
-    }
-
-    if (propertyId) {
-      const property = await this.propertyModel.findById(propertyId);
-      if (!property)
-        throw new BadRequestException(
-          'No property with the provided propertyId found',
-        );
-    }
-
     Object.assign(propertyReview, updatePropertyReviewDto);
     await propertyReview.save();
 
