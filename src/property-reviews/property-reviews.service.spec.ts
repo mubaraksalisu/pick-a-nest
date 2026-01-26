@@ -146,4 +146,35 @@ describe('PropertyReviewsService', () => {
       expect(result).toEqual(mockReviewDto);
     });
   });
+
+  describe('update', () => {
+    const updateDto = { rating: 3, comment: 'updated' };
+    const reviewId = 'r1';
+
+    it('Should throw NotFoundException if no review with the provided id', async () => {
+      model.findById.mockResolvedValue(null);
+
+      await expect(service.update(reviewId, updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('Should update a save review', async () => {
+      const mockExistingReview = {
+        _id: reviewId,
+        rating: 4,
+        comment: 'old',
+        save: jest.fn().mockResolvedValue({ _id: reviewId, ...updateDto }),
+      };
+
+      model.findById.mockResolvedValue(mockExistingReview);
+
+      const result = await service.update(reviewId, updateDto);
+
+      expect(result).toBeDefined();
+      expect(model.findById).toHaveBeenCalledWith(reviewId);
+      expect(result.rating).toBe(3);
+      expect(result.comment).toBe('updated');
+    });
+  });
 });
