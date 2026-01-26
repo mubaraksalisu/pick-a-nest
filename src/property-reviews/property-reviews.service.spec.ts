@@ -4,7 +4,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { PropertyReview } from './schemas/property-review.schema';
 import { PropertiesService } from 'src/properties/properties.service';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('PropertyReviewsService', () => {
   let service: PropertyReviewsService;
@@ -22,6 +26,7 @@ describe('PropertyReviewsService', () => {
   mockPropertyReviewModel.findOne = jest.fn();
   mockPropertyReviewModel.find = jest.fn();
   mockPropertyReviewModel.countDocuments = jest.fn();
+  mockPropertyReviewModel.findById = jest.fn();
 
   const mockReviewDto = {
     userId: 'u1',
@@ -122,6 +127,23 @@ describe('PropertyReviewsService', () => {
       expect(result.totalPage).toBe(1);
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
+    });
+  });
+
+  describe('findOne', () => {
+    it('Should throw NotFoundException if no review with the provided id', async () => {
+      model.findById.mockResolvedValue(null);
+
+      await expect(service.findOne('r1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('Should return review with the given id', async () => {
+      model.findById.mockResolvedValue(mockReviewDto);
+
+      const result = await service.findOne('r1');
+
+      expect(result).toBeDefined();
+      expect(result).toEqual(mockReviewDto);
     });
   });
 });
