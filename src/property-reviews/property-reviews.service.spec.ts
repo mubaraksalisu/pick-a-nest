@@ -27,6 +27,7 @@ describe('PropertyReviewsService', () => {
   mockPropertyReviewModel.find = jest.fn();
   mockPropertyReviewModel.countDocuments = jest.fn();
   mockPropertyReviewModel.findById = jest.fn();
+  mockPropertyReviewModel.findByIdAndDelete = jest.fn();
 
   const mockReviewDto = {
     userId: 'u1',
@@ -175,6 +176,23 @@ describe('PropertyReviewsService', () => {
       expect(model.findById).toHaveBeenCalledWith(reviewId);
       expect(result.rating).toBe(3);
       expect(result.comment).toBe('updated');
+    });
+  });
+
+  describe('remove', () => {
+    it('Should return NotFoundException if no review with the provided id', async () => {
+      model.findByIdAndDelete.mockResolvedValue(null);
+
+      await expect(service.remove('r1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('Should delete and return the deleted review', async () => {
+      model.findByIdAndDelete.mockResolvedValue(mockReviewDto);
+
+      const result = await service.remove('r1');
+
+      expect(result).toBeDefined();
+      expect(result).toEqual(mockReviewDto);
     });
   });
 });
