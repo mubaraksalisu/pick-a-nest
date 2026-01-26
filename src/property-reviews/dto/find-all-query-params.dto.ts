@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsInt,
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class FindAllQueryParamsDto {
   @Type(() => Number)
@@ -15,10 +22,12 @@ export class FindAllQueryParamsDto {
   @IsString()
   @IsOptional()
   @IsNotEmpty()
+  @IsMongoId()
   userId?: string;
 
   @IsString()
   @IsOptional()
+  @IsMongoId()
   @IsNotEmpty()
   propertyId?: string;
 }

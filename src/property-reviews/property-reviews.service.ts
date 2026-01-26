@@ -59,14 +59,10 @@ export class PropertyReviewsService {
     const skip = (page - 1) * limit;
 
     if (userId) {
-      if (!isValidObjectId(userId))
-        throw new BadRequestException('Invalid userId queryString');
       filter.userId = userId;
     }
 
     if (propertyId) {
-      if (!isValidObjectId(propertyId))
-        throw new BadRequestException('Invalid propertyId queryString');
       filter.propertyId = propertyId;
     }
 

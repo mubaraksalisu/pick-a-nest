@@ -20,6 +20,8 @@ describe('PropertyReviewsService', () => {
 
   // Add static methods to the mock constructor
   mockPropertyReviewModel.findOne = jest.fn();
+  mockPropertyReviewModel.find = jest.fn();
+  mockPropertyReviewModel.countDocuments = jest.fn();
 
   const mockReviewDto = {
     userId: 'u1',
@@ -100,6 +102,26 @@ describe('PropertyReviewsService', () => {
       expect(result.propertyId).toEqual(mockReviewDto.propertyId);
       expect(result.rating).toEqual(mockReviewDto.rating);
       expect(result.comment).toEqual(mockReviewDto.comment);
+    });
+  });
+
+  describe('findAll', () => {
+    it('Should return pagenated review', async () => {
+      model.find.mockReturnValue({
+        skip: jest.fn().mockReturnValue({
+          limit: jest.fn().mockResolvedValue([mockReviewDto]),
+        }),
+      });
+
+      model.countDocuments.mockResolvedValue(1);
+
+      const result = await service.findAll({ page: 1, limit: 10 });
+
+      expect(result.data).toEqual([mockReviewDto]);
+      expect(result.total).toBe(1);
+      expect(result.totalPage).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
     });
   });
 });
