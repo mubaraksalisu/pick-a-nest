@@ -5,13 +5,13 @@ import {
 } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
-import { InjectModel } from '@nestjs/mongoose';
 import { User } from '../users/schemas/user.schema';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { RefreshTokenService } from 'src/refresh-token/refresh-token.service';
 import { ConfigService } from '@nestjs/config';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -19,11 +19,11 @@ export class AuthService {
     private jwtService: JwtService,
     private refreshTokenService: RefreshTokenService,
     private configService: ConfigService,
-    @InjectModel(User.name) private userModel: Model<User>,
+    private usersService: UsersService,
   ) {}
 
   async validateUser({ email, password }: AuthPayloadDto) {
-    const user = await this.userModel.findOne({ email });
+    const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(password, user.password))) {
       const { password, ...result } = user.toObject();
       return result;
@@ -51,18 +51,7 @@ export class AuthService {
   }
 
   async register(createUserDto: CreateUserDto) {
-    let user = await this.userModel.findOne({ email: createUserDto.email });
-    if (user) throw new ConflictException('User with this email already exist');
-
-    const salt = await bcrypt.genSalt(10);
-    const encryptedPassword = await bcrypt.hash(createUserDto.password, salt);
-
-    user = new this.userModel({
-      ...createUserDto,
-      password: encryptedPassword,
-    });
-    const { password, ...newUser } = (await user.save()).toObject();
-
+    const newUser = await this.usersService.create(createUserDto);
     const { accessToken, refreshToken } = await this.login(newUser);
 
     return { accessToken, refreshToken, user: newUser };
@@ -81,7 +70,7 @@ export class AuthService {
 
       await this.refreshTokenService.revokeToken(hashedToken._id as string);
 
-      const user = await this.userModel.findById(payload.sub);
+      const user = await this.usersService.findOne(payload.sub);
 
       return this.login(user);
     } catch (error) {
