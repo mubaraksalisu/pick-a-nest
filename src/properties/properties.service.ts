@@ -3,31 +3,22 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Property } from './schemas/property.schema';
-import { Model, Types } from 'mongoose';
-import { User } from 'src/users/schemas/user.schema';
-import { Category } from 'src/categories/schemas/category.schema';
-import { GetPropertiesResponseDto } from './dto/get-property-response.dto';
+import { Model } from 'mongoose';
+import { UsersService } from 'src/users/users.service';
+import { CategoriesService } from 'src/categories/categories.service';
 
 @Injectable()
 export class PropertiesService {
   constructor(
     @InjectModel(Property.name) private propertyModel: Model<Property>,
-    @InjectModel(User.name) private userModel: Model<User>,
-    @InjectModel(Category.name) private categoryModel: Model<Category>,
+    private usersService: UsersService,
+    private categoryModel: CategoriesService,
   ) {}
 
   async create(createPropertyDto: CreatePropertyDto) {
-    const user = await this.userModel.findById(createPropertyDto.ownerId);
-    if (!user)
-      throw new NotFoundException('No user found with the provided ownerId');
-
-    const category = await this.categoryModel.findById(
-      createPropertyDto.categoryId,
-    );
-    if (!category)
-      throw new NotFoundException(
-        'No category found with the provided categoryId',
-      );
+    // These will throw if not found, so no need for manual checks
+    await this.usersService.findOne(createPropertyDto.ownerId);
+    await this.categoryModel.findOne(createPropertyDto.categoryId);
 
     let property = new this.propertyModel({ ...createPropertyDto });
     property = await property.save();
@@ -80,19 +71,13 @@ export class PropertiesService {
       throw new NotFoundException('No property with the provided id found');
 
     if (updatePropertyDto.ownerId) {
-      const user = await this.userModel.findById(updatePropertyDto.ownerId);
-      if (!user)
-        throw new NotFoundException('No user found with the provided ownerId');
+      // This will throw if not found, so no need for manual checks
+      await this.usersService.findOne(updatePropertyDto.ownerId);
     }
 
     if (updatePropertyDto.categoryId) {
-      const category = await this.categoryModel.findById(
-        updatePropertyDto.categoryId,
-      );
-      if (!category)
-        throw new NotFoundException(
-          'No category found with the provided categoryId',
-        );
+      // This will throw if not found, so no need for manual checks
+      await this.categoryModel.findOne(updatePropertyDto.categoryId);
     }
 
     Object.assign(property, updatePropertyDto);

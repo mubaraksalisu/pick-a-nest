@@ -10,7 +10,6 @@ import { Model } from 'mongoose';
 import { UsersService } from 'src/users/users.service';
 import { CreateAgentReviewDto } from './dto/create-agent-review.dto';
 import { FindAllQueryParamsDto } from './dto/find-all-query-params.dto';
-import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
 import { UpdateAgentReviewDto } from './dto/update-agent-review.dto';
 
 @Injectable()
@@ -25,13 +24,9 @@ export class AgentReviewsService {
   ): Promise<AgentReview> {
     const { userId, agentId } = createAgentReviewDto;
 
-    const user = await this.userService.findOne(userId);
-    if (!user)
-      throw new BadRequestException('No user with the provided userId found');
-
-    const agent = await this.userService.findOne(agentId);
-    if (!agent)
-      throw new BadRequestException('No agent with the provided agentId found');
+    // These will throw if not found, so no need for manual checks
+    await this.userService.findOne(userId);
+    await this.userService.findOne(agentId);
 
     let agentReview = await this.agentReviewModel.findOne({
       userId,

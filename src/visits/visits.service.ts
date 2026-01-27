@@ -13,17 +13,17 @@ import { UpdateVisitDto } from './dto/update-visit.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Visit } from './schemas/visit.schema';
 import { Model } from 'mongoose';
-import { Property } from 'src/properties/schemas/property.schema';
-import { User } from 'src/users/schemas/user.schema';
 import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
 import * as luxon from 'luxon';
+import { PropertiesService } from 'src/properties/properties.service';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class VisitsService {
   constructor(
     @InjectModel(Visit.name) private visitModel: Model<Visit>,
-    @InjectModel(Property.name) private propertyModel: Model<Property>,
-    @InjectModel(User.name) private userModel: Model<User>,
+    private propertiesService: PropertiesService,
+    private userModel: UsersService,
   ) {}
 
   async create(createVisitDto: CreateVisitDto): Promise<Visit> {
@@ -177,19 +177,10 @@ export class VisitsService {
     agentId: string,
     clientId: string,
   ) {
-    const property = await this.propertyModel.findById(propertyId);
-    if (!property)
-      throw new BadRequestException(
-        'No property with the provided propertyId found',
-      );
-
-    const agent = await this.userModel.findById(agentId);
-    if (!agent)
-      throw new BadRequestException('No user with the provided agentId found');
-
-    const client = await this.userModel.findById(clientId);
-    if (!client)
-      throw new BadRequestException('No user with the provided clientId found');
+    // These will throw if not found, so no need for manual checks
+    await this.propertiesService.findOne(propertyId);
+    await this.userModel.findOne(agentId);
+    await this.userModel.findOne(clientId);
   }
 
   private assertValidWindow(start: luxon.DateTime, end: luxon.DateTime) {

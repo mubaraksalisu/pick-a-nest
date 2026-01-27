@@ -4,17 +4,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from 'src/users/schemas/user.schema';
 import { Model } from 'mongoose';
 import { Favorite } from './schemas/favorite.schema';
-import { Property } from 'src/properties/schemas/property.schema';
+import { UsersService } from 'src/users/users.service';
+import { PropertiesService } from 'src/properties/properties.service';
 
 @Injectable()
 export class FavoritesService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Favorite.name) private favoriteModel: Model<Favorite>,
-    @InjectModel(Property.name) private propertyModel: Model<Property>,
+    private usersService: UsersService,
+    private propertyModel: PropertiesService,
   ) {}
 
   async getMyFavorites(userId: string) {
@@ -37,13 +37,9 @@ export class FavoritesService {
   }
 
   async addToFavorite(userId: string, propertyId: string): Promise<Favorite> {
-    const user = await this.userModel.findById(userId);
-    if (!user)
-      throw new NotFoundException('No user found with the given userId');
-
-    const property = await this.propertyModel.findById(propertyId);
-    if (!property)
-      throw new NotFoundException('No property with the provided propertyId');
+    // These will throw if not found, so no need for manual checks
+    await this.usersService.findOne(userId);
+    await this.propertyModel.findOne(propertyId);
 
     let favorite = await this.favoriteModel.findOne({ userId, propertyId });
     if (favorite) throw new ConflictException('Already added to your favorite');

@@ -9,9 +9,6 @@ import { UpdatePropertyReviewDto } from './dto/update-property-review.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { PropertyReview } from './schemas/property-review.schema';
 import { Model } from 'mongoose';
-import { User } from 'src/users/schemas/user.schema';
-import { Property } from 'src/properties/schemas/property.schema';
-import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
 import { FindAllQueryParamsDto } from './dto/find-all-query-params.dto';
 import { UsersService } from 'src/users/users.service';
 import { PropertiesService } from 'src/properties/properties.service';
@@ -30,15 +27,9 @@ export class PropertyReviewsService {
   ): Promise<PropertyReview> {
     const { userId, propertyId } = createPropertyReviewDto;
 
-    const user = await this.usersService.findOne(userId);
-    if (!user)
-      throw new BadRequestException('No user with the provided userId found');
-
-    const property = await this.propertyService.findOne(propertyId);
-    if (!property)
-      throw new BadRequestException(
-        'No property with the provided propertyId found',
-      );
+    // These will throw if not found, so no need for manual checks
+    await this.usersService.findOne(userId);
+    await this.propertyService.findOne(propertyId);
 
     let propertyReview = await this.propertyReviewModel.findOne({
       userId,
