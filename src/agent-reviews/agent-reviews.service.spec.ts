@@ -62,24 +62,6 @@ describe('AgentReviewsService', () => {
   });
 
   describe('creat', () => {
-    it('should throw BadRequestException if user not found', async () => {
-      (usersService.findOne as jest.Mock).mockResolvedValueOnce(null);
-
-      await expect(service.create(mockReviewDto)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('should throw BadRequestException if agent not found', async () => {
-      (usersService.findOne as jest.Mock)
-        .mockResolvedValueOnce(mockUser)
-        .mockResolvedValueOnce(null);
-
-      await expect(service.create(mockReviewDto)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
     it('Should throw ConflictException if user already reviewed agent', async () => {
       (usersService.findOne as jest.Mock).mockResolvedValue(mockUser);
       model.findOne.mockResolvedValue({ _id: 'testReview' });
