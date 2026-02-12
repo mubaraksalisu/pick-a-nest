@@ -80,10 +80,35 @@ describe('AuthService', () => {
         password: 'password',
       });
 
+      expect(result).toBeDefined();
       expect(result).toEqual({
         _id: 'userId',
         email: 'email',
       });
+    });
+
+    it("should return null if user is not found", async () => {
+      (usersService.findByEmail as jest.Mock).mockResolvedValue(null)
+
+      const result = await service.validateUser({
+        email: 'email',
+        password: 'password',
+      });
+
+      expect(result).toBeNull()
+    });
+
+    
+    it('should return null if password does not match', async () => {
+      (usersService.findByEmail as jest.Mock).mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false); 
+
+      const result = await service.validateUser({ 
+        email: 'test@example.com', 
+        password: 'wrong_password' 
+      });
+
+      expect(result).toBeNull();
     });
   });
 });
