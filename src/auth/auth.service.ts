@@ -1,12 +1,6 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '../users/schemas/user.schema';
-import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { RefreshTokenService } from 'src/refresh-token/refresh-token.service';
@@ -25,7 +19,7 @@ export class AuthService {
   async validateUser({ email, password }: AuthPayloadDto) {
     const user = await this.usersService.findByEmail(email);
     if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user.toObject();
+      const { password, ...result } = user.toObject ? user.toObject() : user;
       return result;
     }
     return null;
