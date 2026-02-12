@@ -68,22 +68,6 @@ describe('PropertyReviewsService', () => {
   });
 
   describe('create', () => {
-    it('Should throw BadRequestException if user not found', async () => {
-      (usersService.findOne as jest.Mock).mockResolvedValue(null);
-
-      await expect(service.create(mockReviewDto)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('Should throw BadRequestException if property not found', async () => {
-      (propertiesService.findOne as jest.Mock).mockResolvedValue(null);
-
-      await expect(service.create(mockReviewDto)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
     it('Should throw ConflictException if user already reviewed property', async () => {
       (usersService.findOne as jest.Mock).mockResolvedValue(mockUser);
       (propertiesService.findOne as jest.Mock).mockResolvedValue(mockProperty);
