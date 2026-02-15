@@ -34,7 +34,7 @@ export class AuthService {
     await this.refreshTokenService.createToken(
       user._id,
       refreshToken,
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days matching .env REFRESH_EXPIRES_IN
+      new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days matching .env REFRESH_EXPIRES_IN
     );
 
     const accessToken = this.jwtService.sign(payload, {
