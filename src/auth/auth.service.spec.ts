@@ -87,28 +87,52 @@ describe('AuthService', () => {
       });
     });
 
-    it("should return null if user is not found", async () => {
-      (usersService.findByEmail as jest.Mock).mockResolvedValue(null)
+    it('should return null if user is not found', async () => {
+      (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
 
       const result = await service.validateUser({
         email: 'email',
         password: 'password',
       });
 
-      expect(result).toBeNull()
+      expect(result).toBeNull();
     });
 
-    
     it('should return null if password does not match', async () => {
       (usersService.findByEmail as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false); 
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const result = await service.validateUser({ 
-        email: 'test@example.com', 
-        password: 'wrong_password' 
+      const result = await service.validateUser({
+        email: 'test@example.com',
+        password: 'wrong_password',
       });
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('login', () => {
+    it('should return access and refresh tokens', async () => {
+      const mockAccessToken = 'accessToken';
+      const mockRefreshToken = 'refreshToken';
+
+      (jwtService.sign as jest.Mock)
+        .mockReturnValueOnce(mockRefreshToken)
+        .mockReturnValueOnce(mockAccessToken);
+      (configService.get as jest.Mock).mockReturnValue('1h');
+
+      const result = await service.login(mockUser);
+
+      expect(jwtService.sign).toHaveBeenCalledTimes(2);
+      expect(refreshTokenService.createToken).toHaveBeenCalledWith(
+        mockUser._id,
+        mockRefreshToken,
+        expect.any(Date),
+      );
+      expect(result).toEqual({
+        accessToken: mockAccessToken,
+        refreshToken: mockRefreshToken,
+      });
     });
   });
 });
