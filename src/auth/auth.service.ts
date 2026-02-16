@@ -34,7 +34,7 @@ export class AuthService {
     await this.refreshTokenService.createToken(
       user._id,
       refreshToken,
-      new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days matching .env REFRESH_EXPIRES_IN
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days matching .env REFRESH_EXPIRES_IN
     );
 
     const accessToken = this.jwtService.sign(payload, {
@@ -60,7 +60,7 @@ export class AuthService {
         token,
       );
       if (!hashedToken)
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException('Invalid or expired refresh token');
 
       await this.refreshTokenService.revokeToken(hashedToken._id as string);
 
@@ -68,7 +68,7 @@ export class AuthService {
 
       return this.login(user);
     } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
 }

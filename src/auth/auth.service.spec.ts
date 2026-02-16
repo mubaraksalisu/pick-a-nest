@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/users/users.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { UnauthorizedException } from '@nestjs/common';
 
 jest.mock('bcrypt');
 
@@ -37,6 +38,7 @@ describe('AuthService', () => {
           useValue: {
             createToken: jest.fn(),
             validateToken: jest.fn(),
+            revokeToken: jest.fn(),
           },
         },
         {
@@ -50,6 +52,7 @@ describe('AuthService', () => {
           useValue: {
             create: jest.fn(),
             findByEmail: jest.fn(),
+            findOne: jest.fn(),
           },
         },
       ],
@@ -119,6 +122,7 @@ describe('AuthService', () => {
       (jwtService.sign as jest.Mock)
         .mockReturnValueOnce(mockRefreshToken)
         .mockReturnValueOnce(mockAccessToken);
+
       (configService.get as jest.Mock).mockReturnValue('1h');
 
       const result = await service.login(mockUser);
@@ -133,6 +137,89 @@ describe('AuthService', () => {
         accessToken: mockAccessToken,
         refreshToken: mockRefreshToken,
       });
+    });
+  });
+
+  describe('register', () => {
+    it('should create a new user and return tokens', async () => {
+      const mockAccessToken = 'accessToken';
+      const mockRefreshToken = 'refreshToken';
+
+      (usersService.create as jest.Mock).mockResolvedValue(mockUser);
+      (jwtService.sign as jest.Mock)
+        .mockReturnValueOnce(mockRefreshToken)
+        .mockReturnValueOnce(mockAccessToken);
+      (configService.get as jest.Mock).mockReturnValue('1h');
+
+      const result = await service.register({
+        firstName: 'First',
+        lastName: 'Last',
+        phone: '1234567890',
+        email: 'email',
+        password: 'password',
+      });
+
+      expect(usersService.create).toHaveBeenCalledWith({
+        firstName: 'First',
+        lastName: 'Last',
+        phone: '1234567890',
+        email: 'email',
+        password: expect.any(String),
+      });
+      expect(jwtService.sign).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({
+        accessToken: mockAccessToken,
+        refreshToken: mockRefreshToken,
+        user: mockUser,
+      });
+    });
+  });
+
+  describe('refresh', () => {
+    it('should return new access and refresh tokens', async () => {
+      const mockAccessToken = 'newAccessToken';
+      const mockRefreshToken = 'newRefreshToken';
+
+      (jwtService.verify as jest.Mock).mockReturnValue({
+        sub: 'userId',
+        email: 'email',
+      });
+
+      (refreshTokenService.validateToken as jest.Mock).mockResolvedValue({
+        _id: 'tokenId',
+      });
+
+      (usersService.findOne as jest.Mock).mockResolvedValue(mockUser);
+
+      (jwtService.sign as jest.Mock)
+        .mockReturnValueOnce(mockRefreshToken)
+        .mockReturnValueOnce(mockAccessToken);
+      (configService.get as jest.Mock).mockReturnValue('1h');
+
+      const result = await service.refresh('validRefreshToken');
+
+      expect(jwtService.verify).toHaveBeenCalledWith('validRefreshToken');
+      expect(refreshTokenService.validateToken).toHaveBeenCalledWith(
+        'userId',
+        'validRefreshToken',
+      );
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith('tokenId');
+      expect(usersService.findOne).toHaveBeenCalledWith('userId');
+      expect(jwtService.sign).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({
+        accessToken: mockAccessToken,
+        refreshToken: mockRefreshToken,
+      });
+    });
+
+    it('should throw UnauthorizedException for invalid refresh token', async () => {
+      (jwtService.verify as jest.Mock).mockImplementation(() => {
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      });
+
+      await expect(service.refresh('invalidRefreshToken')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 });
