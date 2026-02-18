@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CategoriesService } from './categories.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Category } from './schemas/category.schema';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
 describe('Categories', () => {
   let service: CategoriesService;
@@ -79,6 +79,24 @@ describe('Categories', () => {
       expect(result).toBeDefined();
       expect(model.find).toHaveBeenCalled();
       expect(result).toEqual([mockCategoryDto]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('Should throw NotFoundException if no category with the id is found', async () => {
+      model.findById.mockResolvedValue(null);
+
+      await expect(service.findOne('id')).rejects.toThrow(NotFoundException);
+    });
+
+    it('Should return the category with the specified id', async () => {
+      model.findById.mockResolvedValue(mockCategoryDto);
+
+      const result = await service.findOne('id');
+
+      expect(result).toBeDefined();
+      expect(model.findById).toHaveBeenCalled();
+      expect(result).toEqual(mockCategoryDto);
     });
   });
 });
