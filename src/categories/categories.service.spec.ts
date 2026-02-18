@@ -83,7 +83,7 @@ describe('Categories', () => {
   });
 
   describe('findOne', () => {
-    it('Should throw NotFoundException if no category with the id is found', async () => {
+    it('Should throw NotFoundException if no category with the provided id is found', async () => {
       model.findById.mockResolvedValue(null);
 
       await expect(service.findOne('id')).rejects.toThrow(NotFoundException);
@@ -97,6 +97,32 @@ describe('Categories', () => {
       expect(result).toBeDefined();
       expect(model.findById).toHaveBeenCalled();
       expect(result).toEqual(mockCategoryDto);
+    });
+  });
+
+  describe('update', () => {
+    const mockUpdateCategoryDto = {
+      _id: 'c1',
+      ...mockCategoryDto,
+      name: 'updatedName',
+    };
+
+    it('Should throw NotFoundException if no category with the provided id is found', async () => {
+      model.findByIdAndUpdate.mockResolvedValue(null);
+
+      await expect(service.update('c1', mockUpdateCategoryDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('Should update and return the updated category', async () => {
+      model.findByIdAndUpdate.mockResolvedValue(mockUpdateCategoryDto);
+
+      const result = await service.update('c1', mockUpdateCategoryDto);
+
+      expect(result).toBeDefined();
+      expect(model.findByIdAndUpdate).toHaveBeenCalled();
+      expect(result).toEqual(mockUpdateCategoryDto);
     });
   });
 });
