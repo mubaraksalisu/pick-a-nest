@@ -67,4 +67,18 @@ describe('Categories', () => {
       expect(result.description).toEqual(mockCategoryDto.description);
     });
   });
+
+  describe('findAll', () => {
+    it('Should return all categories', async () => {
+      model.find.mockReturnValue({
+        sort: jest.fn().mockResolvedValue([mockCategoryDto]),
+      });
+
+      const result = await service.findAll();
+
+      expect(result).toBeDefined();
+      expect(model.find).toHaveBeenCalled();
+      expect(result).toEqual([mockCategoryDto]);
+    });
+  });
 });
