@@ -125,4 +125,24 @@ describe('Categories', () => {
       expect(result).toEqual(mockUpdateCategoryDto);
     });
   });
+
+  describe('remove', () => {
+    it('Should throw NotFoundException if no category with the provided id is found', async () => {
+      model.findByIdAndDelete.mockResolvedValue(null);
+
+      await expect(service.remove('c1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('Should delete and return the deleted category', async () => {
+      const mockDeleteCategoryDto = { _id: 'c1', ...mockCategoryDto };
+
+      model.findByIdAndDelete.mockResolvedValue(mockDeleteCategoryDto);
+
+      const result = await service.remove('c1');
+
+      expect(result).toBeDefined();
+      expect(model.findByIdAndDelete).toHaveBeenCalled();
+      expect(result).toEqual(mockDeleteCategoryDto);
+    });
+  });
 });
