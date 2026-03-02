@@ -1,24 +1,24 @@
 import { Module } from '@nestjs/common';
-import { FavoritesModule } from './favorites/favorites.module';
-import { UsersModule } from './users/users.module';
-import { StatesModule } from './states/states.module';
-import { CategoriesModule } from './categories/categories.module';
-import { PropertiesModule } from './properties/properties.module';
-import { VisitsModule } from './visits/visits.module';
-import { AuthModule } from './auth/auth.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
+import { UsersModule } from './modules/users/users.module';
+import { StatesModule } from './modules/states/states.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { PropertiesModule } from './modules/properties/properties.module';
+import { VisitsModule } from './modules/visits/visits.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PropertyReviewsModule } from './property-reviews/property-reviews.module';
-import { HomeModule } from './home/home.module';
-import { HealthModule } from './health/health.module';
+import { PropertyReviewsModule } from './modules/property-reviews/property-reviews.module';
+import { HomeModule } from './modules/home/home.module';
+import { HealthModule } from './modules/health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { HttpExceptionFilter } from './shared/filters/httpException.filter';
-import { AgentReviewsModule } from './agent-reviews/agent-reviews.module';
-import { RefreshTokenModule } from './refresh-token/refresh-token.module';
+import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module';
+import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
 
 @Module({
   imports: [
