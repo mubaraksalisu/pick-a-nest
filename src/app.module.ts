@@ -23,6 +23,7 @@ import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module
 @Module({
   imports: [
     ConfigModule.forRoot({
+      envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
       isGlobal: true,
     }),
     MongooseModule.forRootAsync({
