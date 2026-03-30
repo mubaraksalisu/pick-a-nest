@@ -70,11 +70,6 @@ export class PropertiesService {
     if (!property)
       throw new NotFoundException('No property with the provided id found');
 
-    if (updatePropertyDto.ownerId) {
-      // This will throw if not found, so no need for manual checks
-      await this.usersService.findOne(updatePropertyDto.ownerId);
-    }
-
     if (updatePropertyDto.categoryId) {
       // This will throw if not found, so no need for manual checks
       await this.categoryModel.findOne(updatePropertyDto.categoryId);
