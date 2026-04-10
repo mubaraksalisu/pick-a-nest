@@ -6,7 +6,7 @@ import { AppModule } from 'src/app.module';
 import { Category } from 'src/modules/categories/schemas/category.schema';
 import { Property } from 'src/modules/properties/schemas/property.schema';
 import { User } from 'src/modules/users/schemas/user.schema';
-import * as request from 'supertest';
+import request from 'supertest';
 
 describe('PropertiesService.findOne - E2E', () => {
   let app: INestApplication;

@@ -7,10 +7,10 @@ import { AppModule } from 'src/app.module';
 import { Category } from 'src/modules/categories/schemas/category.schema';
 import { User } from 'src/modules/users/schemas/user.schema';
 import { Property } from 'src/modules/properties/schemas/property.schema';
-import * as request from 'supertest';
+import request from 'supertest';
 import { Types } from 'mongoose';
 
-describe('PropertiesService.create - E2E', () => {
+describe('PropertiesService.update - E2E', () => {
   let app: INestApplication;
   let dbConnection: Connection;
   let jwtService: JwtService;
