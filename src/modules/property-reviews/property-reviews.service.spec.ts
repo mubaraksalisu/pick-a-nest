@@ -17,7 +17,7 @@ describe('PropertyReviewsService', () => {
   let model: any;
 
   // This mock handles the "new model().save()" pattern
-  function mockPropertyReviewModel(dto: any) {
+  function mockPropertyReviewModel(this: any, dto: any) {
     this.data = dto;
     this.save = jest.fn().mockResolvedValue({ _id: 'id', ...dto });
   }

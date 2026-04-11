@@ -8,7 +8,7 @@ describe('Categories', () => {
   let service: CategoriesService;
   let model: any;
 
-  function mockCategoryModel(dto: any) {
+  function mockCategoryModel(this: any, dto: any) {
     this.data = dto;
     this.save = jest.fn().mockResolvedValue({ _id: 'categoryId', ...dto });
   }
