@@ -77,7 +77,10 @@ import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    HttpExceptionFilter,
+    {
+      provide: 'APP_FILTER',
+      useClass: HttpExceptionFilter,
+    }
   ],
 })
 export class AppModule {}

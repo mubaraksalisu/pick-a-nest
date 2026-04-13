@@ -31,8 +31,6 @@ async function bootstrap() {
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
-  app.useGlobalFilters(app.get(HttpExceptionFilter));
-
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // strip unknown properties
