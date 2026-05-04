@@ -71,4 +71,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
+
+  async logout(token: string) {
+    try {
+      const payload = await this.jwtService.verify(token);
+      await this.refreshTokenService.revokeToken(payload.sub);
+    } catch (error) {
+      return; // Token is invalid or already revoked, so we can ignore it
+    }
+  }
 }

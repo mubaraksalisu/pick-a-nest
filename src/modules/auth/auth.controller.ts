@@ -18,6 +18,7 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -85,5 +86,13 @@ export class AuthController {
   @ApiBody({ type: RefreshDto })
   refresh(@Body('refreshToken') token: string) {
     return this.authService.refresh(token);
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Logout user' })
+  @ApiNoContentResponse({ description: 'User logged out successfully' })
+  @ApiBody({ type: RefreshDto })
+  logout(@Body('refreshToken') token: string) {
+    return this.authService.logout(token);
   }
 }
