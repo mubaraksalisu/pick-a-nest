@@ -94,7 +94,7 @@ export class CreatePropertyDto {
   @MaxLength(2048)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
-  virtualTourLink: string;
+  virtualTourLink?: string;
 
   @IsArray({ message: 'Must be an array' })
   @ArrayMinSize(1, { message: 'Array must contain at least 1 item' })

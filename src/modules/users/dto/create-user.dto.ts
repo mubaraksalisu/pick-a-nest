@@ -84,13 +84,13 @@ export class PaginationDto {
   @IsOptional()
   @IsInt()
   @Type(() => Number)
-  page: number;
+  page: number = 1;
 
   @Min(1)
   @IsOptional()
   @IsInt()
   @Type(() => Number)
-  limit: number;
+  limit: number = 10;
 }
 
 export class GetUsersResponseDto {

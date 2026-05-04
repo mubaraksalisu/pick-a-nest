@@ -29,5 +29,5 @@ export class CreatePropertyReviewDto {
   @MinLength(5)
   @MaxLength(255)
   @IsOptional()
-  comment: string;
+  comment?: string;
 }

@@ -10,7 +10,7 @@ export class CreateCategoryDto {
   @MinLength(5)
   @MaxLength(255)
   @IsOptional()
-  description: string;
+  description?: string;
 
   @IsString()
   @MinLength(3)

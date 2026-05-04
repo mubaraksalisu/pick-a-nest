@@ -15,12 +15,12 @@ export class UpdateAgentReviewDto {
   @Max(5)
   @IsNotEmpty()
   @IsOptional()
-  rating: number;
+  rating?: number;
 
   @IsString()
   @MinLength(5)
   @MaxLength(255)
   @IsNotEmpty()
   @IsOptional()
-  comment: string;
+  comment?: string;
 }

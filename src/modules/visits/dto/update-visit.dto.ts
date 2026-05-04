@@ -18,5 +18,5 @@ export class UpdateVisitDto {
   @IsString()
   @IsOptional()
   @MaxLength(256)
-  note: string;
+  note?: string;
 }
