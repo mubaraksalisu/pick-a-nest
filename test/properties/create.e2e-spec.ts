@@ -6,7 +6,7 @@ import { Connection, Model } from 'mongoose';
 import { AppModule } from 'src/app.module';
 import { Category } from 'src/modules/categories/schemas/category.schema';
 import { User } from 'src/modules/users/schemas/user.schema';
-import * as request from 'supertest';
+import request from 'supertest';
 import { Types } from 'mongoose';
 
 describe('PropertiesService.create - E2E', () => {

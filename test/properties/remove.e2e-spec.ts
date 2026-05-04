@@ -139,6 +139,7 @@ describe('PropertiesService.remove - E2E', () => {
     const getResponse = await request(app.getHttpServer())
       .get(`/properties/${testProperty._id}`)
       .set('Authorization', `Bearer ${authToken}`);
+    console.log(getResponse.body);
 
     expect(getResponse.status).toBe(404);
     expect(getResponse.body.message).toBe('No property with the provided id');
