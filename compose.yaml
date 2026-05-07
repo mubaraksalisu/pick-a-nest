@@ -3,18 +3,21 @@ services:
     build:
       context: .
     environment:
-      # NODE_ENV: production
+      NODE_ENV: development
       DATABASE_URL: mongodb://db:27017/pick-a-nest-db
       DATABASE_NAME: pick-a-nest-db
-      SECRET: JWTSecretKey
-      EXPIRES_IN: 7d
+      SECRET: ${SECRET}
+      REFRESH_EXPIRES_IN: 30d
+      ACCESS_EXPIRES_IN: 45m
     ports:
       - 3000:3000
     volumes:
       - .:/app
+    depends_on:
+      - db
 
   db:
-    image: mongo
+    image: mongo:8.0.20
     ports:
       - 27017:27017
     volumes:
