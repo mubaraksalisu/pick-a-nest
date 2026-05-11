@@ -19,6 +19,8 @@ import * as winston from 'winston';
 import { HttpExceptionFilter } from './shared/filters/httpException.filter';
 import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module';
 import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis from '@keyv/redis';
 
 @Module({
   imports: [
@@ -58,6 +60,16 @@ import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module
       ],
       exitOnError: true, // prevent Winston from exiting after logging
     }),
+
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => {
+        return {
+          stores: [new KeyvRedis('redis://localhost:6379')],
+        };
+      },
+    }),
+
     FavoritesModule,
     UsersModule,
     StatesModule,
@@ -80,7 +92,7 @@ import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module
     {
       provide: 'APP_FILTER',
       useClass: HttpExceptionFilter,
-    }
+    },
   ],
 })
 export class AppModule {}

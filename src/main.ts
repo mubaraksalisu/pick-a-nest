@@ -13,11 +13,11 @@ async function bootstrap() {
 
   app.use(helmet());
 
-  app.enableCors({
-    origin: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-  });
+  // app.enableCors({
+  //   origin: '*', // allow all origins for simplicity; adjust as needed for production
+  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  //   credentials: true,
+  // });
 
   const config = new DocumentBuilder()
     .setTitle('Real Estate API')

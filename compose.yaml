@@ -15,7 +15,11 @@ services:
       - .:/app
     depends_on:
       - db
-
+      - redis
+  redis:
+    image: redis:8.8-m03-trixie
+    ports:
+      - '6379:6379'
   db:
     image: mongo:8.0.20
     ports:

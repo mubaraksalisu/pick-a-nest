@@ -157,3 +157,16 @@ export class Property extends Document {
 }
 
 export const PropertySchema = SchemaFactory.createForClass(Property);
+
+PropertySchema.index({ city: 1 });
+PropertySchema.index({ state: 1 });
+PropertySchema.index({ type: 1 });
+PropertySchema.index({ price: 1 });
+PropertySchema.index({ bedroom: 1 });
+PropertySchema.index({ createdAt: -1 });
+
+PropertySchema.index({
+  title: 'text',
+  description: 'text',
+  address: 'text',
+});

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -6,10 +6,13 @@ import { Property } from './schemas/property.schema';
 import { Model } from 'mongoose';
 import { UsersService } from 'src/modules/users/users.service';
 import { CategoriesService } from 'src/modules/categories/categories.service';
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
+import { PropertyQueryDto } from './dto/property-query.dto';
 
 @Injectable()
 export class PropertiesService {
   constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel(Property.name) private propertyModel: Model<Property>,
     private usersService: UsersService,
     private categoryModel: CategoriesService,
@@ -31,18 +34,32 @@ export class PropertiesService {
     return populatedProperty;
   }
 
-  async findAll({ limit, page }) {
+  async findAll(query: PropertyQueryDto) {
+    const filters = this.buildFilters(query);
+
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+
     const skip = (page - 1) * limit;
+    const sort: any = {
+      [sortBy]: sortOrder === 'asc' ? 1 : -1,
+    };
+
     const [data, total] = await Promise.all([
       this.propertyModel
-        .find()
+        .find(filters)
         .skip(skip)
         .limit(limit)
         .populate({ path: 'ownerId', select: '-password' })
         .populate('categoryId')
-        .sort('_id'),
+        .sort(sort)
+        .lean(),
 
-      this.propertyModel.countDocuments(),
+      this.propertyModel.countDocuments(filters),
     ]);
 
     return {
@@ -55,12 +72,23 @@ export class PropertiesService {
   }
 
   async findOne(id: string) {
+    const cachedProperty = await this.cacheManager.get<Property>(
+      `property:${id}`,
+    );
+    if (cachedProperty) {
+      console.log('Cache hit for property: ', id);
+      return cachedProperty;
+    }
+
     const property = await this.propertyModel
       .findById(id)
       .populate({ path: 'ownerId', select: '-password' })
       .populate('categoryId');
     if (!property)
       throw new NotFoundException('No property with the provided id');
+
+    await this.cacheManager.set(`property:${id}`, property);
+    // console.log('Store Type:', (this.cacheManager as any).store.name);
 
     return property;
   }
@@ -95,5 +123,40 @@ export class PropertiesService {
       throw new NotFoundException('No property with the provided id found');
 
     return property;
+  }
+
+  buildFilters(query: PropertyQueryDto) {
+    const {
+      city,
+      state,
+      type,
+      minPrice,
+      maxPrice,
+      bedrooms,
+      bathrooms,
+      search,
+    } = query;
+
+    const filters: any = {};
+
+    if (city) filters.city = new RegExp(city, 'i');
+    if (state) filters.state = new RegExp(state, 'i');
+    if (type) filters.type = type;
+    if (bedrooms) filters.bedrooms = { $gte: bedrooms };
+    if (bathrooms) filters.bathrooms = { $gte: bathrooms };
+
+    if (minPrice || maxPrice) {
+      filters.price = {};
+      if (minPrice) filters.price.$gte = minPrice;
+      if (maxPrice) filters.price.$lte = maxPrice;
+    }
+
+    if (search) {
+      filters.$text = {
+        $search: search,
+      };
+    }
+
+    return filters;
   }
 }

@@ -28,7 +28,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { PaginationDto } from './dto/pagination.dto';
+import { PropertyQueryDto } from './dto/property-query.dto';
 import { GetPropertiesResponseDto } from './dto/get-property-response.dto';
 
 @ApiTags('properties')
@@ -70,8 +70,8 @@ export class PropertiesController {
     type: Number,
     description: 'page number of document to get',
   })
-  findAll(@Query() pagination: PaginationDto) {
-    return this.propertiesService.findAll(pagination);
+  findAll(@Query() query: PropertyQueryDto) {
+    return this.propertiesService.findAll(query);
   }
 
   @UseGuards(ObjectIdGuard)
