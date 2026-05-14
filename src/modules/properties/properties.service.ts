@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -6,16 +6,16 @@ import { Property } from './schemas/property.schema';
 import { Model } from 'mongoose';
 import { UsersService } from 'src/modules/users/users.service';
 import { CategoriesService } from 'src/modules/categories/categories.service';
-import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { PropertyQueryDto } from './dto/property-query.dto';
+import { PropertyCacheService } from './cache/property-cache.service';
 
 @Injectable()
 export class PropertiesService {
   constructor(
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     @InjectModel(Property.name) private propertyModel: Model<Property>,
     private usersService: UsersService,
     private categoryModel: CategoriesService,
+    private readonly propertyCache: PropertyCacheService,
   ) {}
 
   async create(createPropertyDto: CreatePropertyDto) {
@@ -36,7 +36,7 @@ export class PropertiesService {
 
   async findAll(query: PropertyQueryDto) {
     const cacheKey = this.buildCacheKey(query);
-    const cachedProperties = await this.cacheManager.get(cacheKey);
+    const cachedProperties = await this.propertyCache.get(cacheKey);
     if (cachedProperties) return cachedProperties;
 
     const filters = this.buildFilters(query);
@@ -53,8 +53,6 @@ export class PropertiesService {
     const sort: any = {
       [sortBy]: sortOrder === 'asc' ? 1 : -1,
     };
-
-    console.log(filters);
 
     const [data, total] = await Promise.all([
       this.propertyModel
@@ -77,15 +75,13 @@ export class PropertiesService {
       totalPage: Math.ceil(total / limit),
     };
 
-    await this.cacheManager.set(cacheKey, result);
+    await this.propertyCache.set(cacheKey, result);
 
     return result;
   }
 
   async findOne(id: string) {
-    const cachedProperty = await this.cacheManager.get<Property>(
-      `property:${id}`,
-    );
+    const cachedProperty = await this.propertyCache.get(`property:${id}`);
     if (cachedProperty) {
       return cachedProperty;
     }
@@ -97,7 +93,7 @@ export class PropertiesService {
     if (!property)
       throw new NotFoundException('No property with the provided id');
 
-    await this.cacheManager.set(`property:${id}`, property);
+    await this.propertyCache.set(`property:${id}`, property);
 
     return property;
   }

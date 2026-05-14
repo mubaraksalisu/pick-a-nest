@@ -5,6 +5,7 @@ import { UsersModule } from 'src/modules/users/users.module';
 import { CategoriesModule } from 'src/modules/categories/categories.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Property, PropertySchema } from './schemas/property.schema';
+import { PropertyCacheService } from './cache/property-cache.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { Property, PropertySchema } from './schemas/property.schema';
     ]),
   ],
   controllers: [PropertiesController],
-  providers: [PropertiesService],
+  providers: [PropertiesService, PropertyCacheService],
   exports: [PropertiesService],
 })
 export class PropertiesModule {}

@@ -106,6 +106,12 @@ export class PropertiesController {
     description: 'Sort order of properties',
     required: false,
   })
+  @ApiQuery({
+    name: 'type',
+    type: String,
+    description: "filter properties for 'sell' or for 'rent'",
+    required: false,
+  })
   findAll(@Query() query: PropertyQueryDto) {
     return this.propertiesService.findAll(query);
   }

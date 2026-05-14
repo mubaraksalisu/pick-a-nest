@@ -66,6 +66,7 @@ import KeyvRedis from '@keyv/redis';
       useFactory: async () => {
         return {
           stores: [new KeyvRedis('redis://localhost:6379')],
+          ttl: 60 * 1000,
         };
       },
     }),
