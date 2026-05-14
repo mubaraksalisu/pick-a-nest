@@ -143,7 +143,6 @@ export class Property extends Document {
     },
     type: String,
     enum: ['daily', 'weekly', 'monthly', 'yearly'],
-    default: 'yearly',
   })
   rentDuration: string;
 
@@ -163,6 +162,7 @@ PropertySchema.index({ state: 1 });
 PropertySchema.index({ type: 1 });
 PropertySchema.index({ price: 1 });
 PropertySchema.index({ bedroom: 1 });
+PropertySchema.index({ bathroom: 1 });
 PropertySchema.index({ createdAt: -1 });
 
 PropertySchema.index({

@@ -70,6 +70,42 @@ export class PropertiesController {
     type: Number,
     description: 'page number of document to get',
   })
+  @ApiQuery({
+    name: 'city',
+    type: String,
+    description: 'filter properties by city',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'state',
+    type: String,
+    description: 'filter properties by state',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'bedrooms',
+    type: Number,
+    description: 'filter properties by number of bedrooms',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'bathrooms',
+    type: Number,
+    description: 'filter properties by number of bathrooms',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    type: String,
+    description: 'How to sort the properties',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    type: String,
+    description: 'Sort order of properties',
+    required: false,
+  })
   findAll(@Query() query: PropertyQueryDto) {
     return this.propertiesService.findAll(query);
   }

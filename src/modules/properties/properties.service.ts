@@ -35,6 +35,10 @@ export class PropertiesService {
   }
 
   async findAll(query: PropertyQueryDto) {
+    const cacheKey = this.buildCacheKey(query);
+    const cachedProperties = await this.cacheManager.get(cacheKey);
+    if (cachedProperties) return cachedProperties;
+
     const filters = this.buildFilters(query);
 
     const {
@@ -45,9 +49,12 @@ export class PropertiesService {
     } = query;
 
     const skip = (page - 1) * limit;
+
     const sort: any = {
       [sortBy]: sortOrder === 'asc' ? 1 : -1,
     };
+
+    console.log(filters);
 
     const [data, total] = await Promise.all([
       this.propertyModel
@@ -62,13 +69,17 @@ export class PropertiesService {
       this.propertyModel.countDocuments(filters),
     ]);
 
-    return {
+    const result = {
       data,
       total,
       page,
       limit,
       totalPage: Math.ceil(total / limit),
     };
+
+    await this.cacheManager.set(cacheKey, result);
+
+    return result;
   }
 
   async findOne(id: string) {
@@ -76,7 +87,6 @@ export class PropertiesService {
       `property:${id}`,
     );
     if (cachedProperty) {
-      console.log('Cache hit for property: ', id);
       return cachedProperty;
     }
 
@@ -88,7 +98,6 @@ export class PropertiesService {
       throw new NotFoundException('No property with the provided id');
 
     await this.cacheManager.set(`property:${id}`, property);
-    // console.log('Store Type:', (this.cacheManager as any).store.name);
 
     return property;
   }
@@ -125,7 +134,7 @@ export class PropertiesService {
     return property;
   }
 
-  buildFilters(query: PropertyQueryDto) {
+  private buildFilters(query: PropertyQueryDto) {
     const {
       city,
       state,
@@ -158,5 +167,16 @@ export class PropertiesService {
     }
 
     return filters;
+  }
+
+  private buildCacheKey(query: PropertyQueryDto) {
+    const sorted = Object.keys(query)
+      .sort()
+      .reduce((obj, key) => {
+        obj[key] = query[key];
+        return obj;
+      }, {});
+
+    return `properties:${JSON.stringify(sorted)}`;
   }
 }

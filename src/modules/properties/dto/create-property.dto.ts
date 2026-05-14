@@ -104,8 +104,8 @@ export class CreatePropertyDto {
 
   @IsString()
   @IsEnum(['daily', 'weekly', 'monthly', 'yearly'])
-  @Transform(({ value }) => value || 'yearly')
-  rentDuration: string;
+  @IsOptional()
+  rentDuration?: string;
 
   @IsString()
   @IsNotEmpty()
