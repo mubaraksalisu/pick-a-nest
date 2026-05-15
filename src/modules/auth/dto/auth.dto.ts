@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import { Request } from 'express';
+import { UserResponseDto } from 'src/modules/users/dto/create-user.dto';
 
 export class AuthPayloadDto {
   @IsEmail()
@@ -23,18 +25,8 @@ export class LoginDto {
   refreshToken: string;
 }
 
-export class Profile {
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-  phone: string;
-  active: boolean;
-  imageUrl: string;
-  _id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  __v: number;
+export class AuthenticatedRequest extends Request {
+  user: UserResponseDto;
 }
 
 export class RegisterationDto {

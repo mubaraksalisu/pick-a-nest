@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -30,6 +34,8 @@ export class PropertiesService {
       .findById(property._id)
       .populate({ path: 'ownerId', select: '-password' })
       .populate('categoryId');
+
+    await this.propertyCache.clearLists();
 
     return populatedProperty;
   }
@@ -98,7 +104,11 @@ export class PropertiesService {
     return property;
   }
 
-  async update(id: string, updatePropertyDto: UpdatePropertyDto) {
+  async update(
+    id: string,
+    authUserId: string,
+    updatePropertyDto: UpdatePropertyDto,
+  ) {
     let property = await this.propertyModel.findById(id);
     if (!property)
       throw new NotFoundException('No property with the provided id found');
@@ -108,6 +118,9 @@ export class PropertiesService {
       await this.categoryModel.findOne(updatePropertyDto.categoryId);
     }
 
+    if (authUserId !== property.ownerId.toString())
+      throw new UnauthorizedException('Only property owner can update');
+
     Object.assign(property, updatePropertyDto);
     await property.save();
 
@@ -115,6 +128,11 @@ export class PropertiesService {
       .findById(property._id)
       .populate({ path: 'ownerId', select: '-password' })
       .populate('categoryId');
+
+    // Clear caches
+    await this.propertyCache.clearSingle(`property:${id}`);
+    // Clear all list caches since the property might affect filtering
+    await this.propertyCache.clearLists();
 
     return property;
   }
@@ -126,6 +144,10 @@ export class PropertiesService {
       .populate('categoryId');
     if (!property)
       throw new NotFoundException('No property with the provided id found');
+
+    // Clear caches
+    await this.propertyCache.clearSingle(`property:${id}`);
+    await this.propertyCache.clearLists();
 
     return property;
   }

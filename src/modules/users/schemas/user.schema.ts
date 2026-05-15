@@ -41,10 +41,10 @@ export class User extends Document {
 
   @Prop({
     type: String,
-    enum: ['admin', 'user'],
+    enum: ['admin', 'user', 'agent'],
     default: 'user',
   })
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'agent';
 
   @Prop({
     type: String,
@@ -55,10 +55,11 @@ export class User extends Document {
   phone: string;
 
   @Prop({
-    type: Boolean,
-    default: true,
+    type: String,
+    enum: ['active', 'suspended', 'deactivated'],
+    default: 'active',
   })
-  active: boolean;
+  status: 'active' | 'suspended' | 'deactivated';
 
   @Prop({
     type: String,

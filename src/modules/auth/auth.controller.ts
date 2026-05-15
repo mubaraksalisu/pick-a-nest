@@ -10,7 +10,7 @@ import {
 import { AuthService } from './auth.service';
 import { LocalGuard } from './guards/local.guard';
 import { Request } from 'express';
-import { CreateUserDto } from '../users/dto/create-user.dto';
+import { CreateUserDto, UserResponseDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -27,7 +27,6 @@ import {
 import {
   AuthPayloadDto,
   LoginDto,
-  Profile,
   RefreshDto,
   RegisterationDto,
 } from './dto/auth.dto';
@@ -68,7 +67,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Return user profile' })
-  @ApiOkResponse({ description: 'Return user profile', type: Profile })
+  @ApiOkResponse({ description: 'Return user profile', type: UserResponseDto })
   @ApiUnauthorizedResponse({
     description: 'Authentication required to access resource',
   })

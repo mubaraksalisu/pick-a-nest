@@ -41,21 +41,10 @@ export class CreateUserDto {
   password: string;
 
   @IsString()
-  @IsOptional()
-  @IsEnum(['user', 'admin'])
-  @ApiProperty({ description: 'User role', example: 'user' })
-  role?: string = 'user';
-
-  @IsString()
   @MinLength(5)
   @MaxLength(20)
   @ApiProperty({ description: 'User phone number', example: '08012345678' })
   phone: string;
-
-  @IsBoolean()
-  @IsOptional()
-  @ApiProperty({ description: 'is user status active or not', example: true })
-  active?: boolean = true;
 
   @IsString()
   @MinLength(5)

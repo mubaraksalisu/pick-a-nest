@@ -9,12 +9,14 @@ import {
   ValidationPipe,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import {
   CreatePropertyDto,
   PropertyResponseDto,
 } from './dto/create-property.dto';
+import { Request } from 'express';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
@@ -30,6 +32,8 @@ import {
 } from '@nestjs/swagger';
 import { PropertyQueryDto } from './dto/property-query.dto';
 import { GetPropertiesResponseDto } from './dto/get-property-response.dto';
+import { UserResponseDto } from '../users/dto/create-user.dto';
+import { AuthenticatedRequest } from '../auth/dto/auth.dto';
 
 @ApiTags('properties')
 @Controller('properties')
@@ -157,8 +161,10 @@ export class PropertiesController {
   update(
     @Param('id') id: string,
     @Body(ValidationPipe) updatePropertyDto: UpdatePropertyDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.propertiesService.update(id, updatePropertyDto);
+    const { _id } = req.user;
+    return this.propertiesService.update(id, _id, updatePropertyDto);
   }
 
   @UseGuards(JwtAuthGuard, ObjectIdGuard)
