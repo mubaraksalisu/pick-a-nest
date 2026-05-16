@@ -29,6 +29,9 @@ import {
   PaginationDto,
   UserResponseDto,
 } from './dto/create-user.dto';
+import { Roles } from 'src/shared/auth/decorators/roles.decorator';
+import { UserRole } from 'src/shared/auth/enums/user-role.enum';
+import { RolesGuard } from 'src/shared/auth/guards/roles.guard';
 
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -37,8 +40,9 @@ import {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @UseGuards(AdminGuard)
   @Get()
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get users. Accessed only by admin' })
   @ApiQuery({
     name: 'page',

@@ -26,6 +26,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { StateResponseDto } from './dto/state-response.dto';
+import { Roles } from 'src/shared/auth/decorators/roles.decorator';
+import { UserRole } from 'src/shared/auth/enums/user-role.enum';
+import { RolesGuard } from 'src/shared/auth/guards/roles.guard';
 
 @ApiTags('states')
 @Controller('states')
@@ -48,6 +51,8 @@ export class StatesController {
   }
 
   @Get()
+  @Roles(UserRole.AGENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get all states in the country' })
   @ApiOkResponse({
     description: 'Return list of all states in the country',
@@ -70,8 +75,9 @@ export class StatesController {
     return this.statesService.findOne(id);
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard, ObjectIdGuard)
   @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a state details by id' })
   @ApiParam({
