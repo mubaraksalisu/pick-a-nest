@@ -32,7 +32,7 @@ export class AuthenticatedRequest extends Request {
 export class RegisterationDto {
   accessToken: string;
   refreshToken: string;
-  user: Profile;
+  user: UserResponseDto;
 }
 
 export class RefreshDto {

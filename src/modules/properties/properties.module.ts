@@ -5,18 +5,19 @@ import { UsersModule } from 'src/modules/users/users.module';
 import { CategoriesModule } from 'src/modules/categories/categories.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Property, PropertySchema } from './schemas/property.schema';
-import { PropertyCacheService } from './cache/property-cache.service';
+import { CacheModule } from 'src/infrastructure/cache/cache.module';
 
 @Module({
   imports: [
     UsersModule,
     CategoriesModule,
+    CacheModule,
     MongooseModule.forFeature([
       { name: Property.name, schema: PropertySchema },
     ]),
   ],
   controllers: [PropertiesController],
-  providers: [PropertiesService, PropertyCacheService],
+  providers: [PropertiesService],
   exports: [PropertiesService],
 })
 export class PropertiesModule {}

@@ -11,7 +11,8 @@ import { Model } from 'mongoose';
 import { UsersService } from 'src/modules/users/users.service';
 import { CategoriesService } from 'src/modules/categories/categories.service';
 import { PropertyQueryDto } from './dto/property-query.dto';
-import { PropertyCacheService } from './cache/property-cache.service';
+import { CacheService } from 'src/infrastructure/cache/cache.service';
+import { PropertiesCacheKeys } from 'src/infrastructure/cache/cache.keys';
 
 @Injectable()
 export class PropertiesService {
@@ -19,7 +20,7 @@ export class PropertiesService {
     @InjectModel(Property.name) private propertyModel: Model<Property>,
     private usersService: UsersService,
     private categoryModel: CategoriesService,
-    private readonly propertyCache: PropertyCacheService,
+    private cacheService: CacheService,
   ) {}
 
   async create(createPropertyDto: CreatePropertyDto) {
@@ -35,14 +36,12 @@ export class PropertiesService {
       .populate({ path: 'ownerId', select: '-password' })
       .populate('categoryId');
 
-    await this.propertyCache.clearLists();
-
     return populatedProperty;
   }
 
   async findAll(query: PropertyQueryDto) {
     const cacheKey = this.buildCacheKey(query);
-    const cachedProperties = await this.propertyCache.get(cacheKey);
+    const cachedProperties = await this.cacheService.get(cacheKey);
     if (cachedProperties) return cachedProperties;
 
     const filters = this.buildFilters(query);
@@ -81,13 +80,14 @@ export class PropertiesService {
       totalPage: Math.ceil(total / limit),
     };
 
-    await this.propertyCache.set(cacheKey, result);
+    await this.cacheService.set(cacheKey, result, 5 * 60 * 1000);
 
     return result;
   }
 
   async findOne(id: string) {
-    const cachedProperty = await this.propertyCache.get(`property:${id}`);
+    const key = PropertiesCacheKeys.propertyById(id);
+    const cachedProperty = await this.cacheService.get(key);
     if (cachedProperty) {
       return cachedProperty;
     }
@@ -99,7 +99,7 @@ export class PropertiesService {
     if (!property)
       throw new NotFoundException('No property with the provided id');
 
-    await this.propertyCache.set(`property:${id}`, property);
+    await this.cacheService.set(key, property, 5 * 60 * 1000);
 
     return property;
   }
@@ -118,7 +118,7 @@ export class PropertiesService {
       await this.categoryModel.findOne(updatePropertyDto.categoryId);
     }
 
-    if (authUserId !== property.ownerId.toString())
+    if (authUserId.toString() !== property.ownerId.toString())
       throw new UnauthorizedException('Only property owner can update');
 
     Object.assign(property, updatePropertyDto);
@@ -130,9 +130,8 @@ export class PropertiesService {
       .populate('categoryId');
 
     // Clear caches
-    await this.propertyCache.clearSingle(`property:${id}`);
-    // Clear all list caches since the property might affect filtering
-    await this.propertyCache.clearLists();
+    const key = PropertiesCacheKeys.propertyById(id);
+    await this.cacheService.delete(key);
 
     return property;
   }
@@ -146,8 +145,8 @@ export class PropertiesService {
       throw new NotFoundException('No property with the provided id found');
 
     // Clear caches
-    await this.propertyCache.clearSingle(`property:${id}`);
-    await this.propertyCache.clearLists();
+    const key = PropertiesCacheKeys.propertyById(id);
+    await this.cacheService.delete(key);
 
     return property;
   }
