@@ -61,7 +61,7 @@ export class UserResponseDto {
   email: string;
   role: string;
   phone: string;
-  active: boolean;
+  status: string;
   imageUrl: string;
   createdAt: Date;
   updatedAt: Date;

@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from '../users/dto/create-user.dto';
+import { CreateUserDto, UserResponseDto } from '../users/dto/create-user.dto';
 import { RefreshTokenService } from 'src/modules/refresh-token/refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/modules/users/users.service';
@@ -26,6 +26,9 @@ export class AuthService {
   }
 
   async login(user: any) {
+    if (user.status !== 'active')
+      throw new UnauthorizedException('User account suspended');
+
     const payload = { sub: user._id, role: user.role, email: user.email };
     const refreshToken = this.jwtService.sign(payload, {
       expiresIn: this.configService.get('REFRESH_EXPIRES_IN'),
