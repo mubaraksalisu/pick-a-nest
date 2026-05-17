@@ -5,7 +5,7 @@ export class CreateFavoriteDto {
   @IsMongoId()
   @IsNotEmpty()
   @ApiProperty({ description: 'ID of property to be added to favorite list' })
-  propertId: string;
+  propertyId: string;
 }
 
 export class CreateFavoriteResponseDto {
