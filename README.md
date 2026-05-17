@@ -1,98 +1,182 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Pick-a-Nest
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS-based real estate backend API built with TypeScript, MongoDB, Redis, JWT authentication, Swagger docs, and structured logging.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Overview
 
-## Description
+`pick-a-nest` is designed as a complete backend for a property marketplace. It includes support for users, auth, properties, states, categories, favorites, visits, reviews, caching, rate limiting, health checks, and API documentation.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Key features
 
-## Project setup
+- Modular NestJS architecture
+- MongoDB persistence via Mongoose
+- Redis-backed caching for fast responses
+- JWT authentication with access and refresh tokens
+- Passport local + JWT strategies
+- API documentation at `/docs`
+- Global validation and exception handling
+- Rate limiting using `@nestjs/throttler`
+- Production-grade logging with `winston`
+- Health checks via `@nestjs/terminus`
+- Jest + Supertest test setup
 
-```bash
-$ npm install
-```
+## Project structure
 
-## Compile and run the project
+Top-level modules include:
 
-```bash
-# development
-$ npm run start
+- `src/modules/auth` — authentication, login, and token handling
+- `src/modules/users` — user registration and management
+- `src/modules/properties` — property CRUD and listing
+- `src/modules/categories` — property categories
+- `src/modules/states` — geographic state management
+- `src/modules/favorites` — favorite listings for users
+- `src/modules/visits` — visit scheduling or tracking
+- `src/modules/property-reviews` — reviews for properties
+- `src/modules/agent-reviews` — reviews for agents
+- `src/modules/refresh-token` — refresh token persistence
+- `src/modules/health` — readiness and liveness checks
+- `src/shared` — global filters, guards, and utilities
 
-# watch mode
-$ npm run start:dev
+## Tech stack
 
-# production mode
-$ npm run start:prod
-```
+- Node.js 24
+- NestJS 11
+- TypeScript
+- MongoDB via Mongoose
+- Redis cache via `@keyv/redis`
+- Swagger UI (`@nestjs/swagger`)
+- JWT auth with `passport-jwt`
+- Winston logging
+- Jest + Supertest for tests
+- ESLint + Prettier for formatting and linting
 
-## Run tests
+## Prerequisites
 
-```bash
-# unit tests
-$ npm run test
+- Node.js 24+ and npm
+- MongoDB
+- Redis
+- Docker and Docker Compose (optional)
 
-# e2e tests
-$ npm run test:e2e
+## Setup
 
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Install dependencies
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+2. Create a `.env` file in the project root
 
-## Resources
+Example `.env`:
 
-Check out a few resources that may come in handy when working with NestJS:
+```env
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=mongodb://localhost:27017/pick-a-nest-db
+DATABASE_NAME=pick-a-nest-db
+SECRET=your_jwt_secret_here
+REFRESH_EXPIRES_IN=30d
+ACCESS_EXPIRES_IN=45m
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+> Tests run with `NODE_ENV=test` and load `.env.test` when present.
 
-## Support
+## Running the app
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npm run start
+```
 
-## Stay in touch
+For hot reload during development:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+npm run start:dev
+```
+
+Production build and run:
+
+```bash
+npm run build
+npm run start:prod
+```
+
+The app listens on the port defined by `PORT` or `3000` by default.
+
+## Docker
+
+Build and run the container locally:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- `server` on port `3000`
+- `db` MongoDB service on port `27017`
+- `redis` on port `6379`
+
+## API documentation
+
+Open the Swagger UI at:
+
+```text
+http://localhost:3000/docs
+```
+
+## Testing
+
+Run unit tests:
+
+```bash
+npm run test
+```
+
+Run e2e tests:
+
+```bash
+npm run test:e2e
+```
+
+Generate coverage:
+
+```bash
+npm run test:cov
+```
+
+## Code quality
+
+Format source files:
+
+```bash
+npm run format
+```
+
+Run linting and auto-fix issues:
+
+```bash
+npm run lint
+```
+
+## Environment variables
+
+The app reads configuration from `.env` by default. Important variables:
+
+- `NODE_ENV` — environment mode
+- `PORT` — HTTP server port
+- `DATABASE_URL` — MongoDB connection string
+- `DATABASE_NAME` — MongoDB database name
+- `SECRET` — JWT secret key
+- `REFRESH_EXPIRES_IN` — refresh token TTL
+- `ACCESS_EXPIRES_IN` — access token TTL
+
+## Notes
+
+- Global validation is enforced via `ValidationPipe`.
+- Swagger docs are registered under `/docs`.
+- Winston logs errors to `logs/error.log` and console output.
+- Redis caching is configured at `redis://localhost:6379` when running locally.
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This repository is currently marked as `UNLICENSED` in `package.json`.
