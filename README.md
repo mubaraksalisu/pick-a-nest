@@ -117,6 +117,8 @@ This starts:
 - `db` MongoDB service on port `27017`
 - `redis` on port `6379`
 
+The current `Dockerfile` is configured to run the app in development mode with `npm run start:dev`. If you need a production container, adjust the Dockerfile CMD or run `npm run start:prod` inside the image.
+
 ## API documentation
 
 Open the Swagger UI at:
@@ -167,6 +169,7 @@ The app reads configuration from `.env` by default. Important variables:
 - `PORT` — HTTP server port
 - `DATABASE_URL` — MongoDB connection string
 - `DATABASE_NAME` — MongoDB database name
+- `REDIS_URL` — Redis connection string
 - `SECRET` — JWT secret key
 - `REFRESH_EXPIRES_IN` — refresh token TTL
 - `ACCESS_EXPIRES_IN` — access token TTL
