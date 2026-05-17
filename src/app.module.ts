@@ -35,7 +35,7 @@ import { CacheModule } from './infrastructure/cache/cache.module';
       }),
       inject: [ConfigService],
     }),
-    ThrottlerModule.forRoot({ throttlers: [{ ttl: 60000, limit: 30 }] }),
+    ThrottlerModule.forRoot({ throttlers: [{ ttl: 60, limit: 30 }] }),
     WinstonModule.forRoot({
       transports: [
         new winston.transports.Console({
