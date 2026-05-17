@@ -52,7 +52,7 @@ export class FavoritesController {
   ) {
     return this.favoritesService.addToFavorite(
       req.user._id,
-      createFavoriteDto.propertId,
+      createFavoriteDto.propertyId,
     );
   }
 

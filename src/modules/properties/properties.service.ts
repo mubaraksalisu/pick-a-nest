@@ -31,6 +31,8 @@ export class PropertiesService {
     let property = new this.propertyModel({ ...createPropertyDto });
     property = await property.save();
 
+    await this.incrementPropertyListCacheVersion();
+
     const populatedProperty = await this.propertyModel
       .findById(property._id)
       .populate({ path: 'ownerId', select: '-password' })
@@ -40,7 +42,7 @@ export class PropertiesService {
   }
 
   async findAll(query: PropertyQueryDto) {
-    const cacheKey = this.buildCacheKey(query);
+    const cacheKey = await this.buildCacheKey(query);
     const cachedProperties = await this.cacheService.get(cacheKey);
     if (cachedProperties) return cachedProperties;
 
@@ -132,6 +134,7 @@ export class PropertiesService {
     // Clear caches
     const key = PropertiesCacheKeys.propertyById(id);
     await this.cacheService.delete(key);
+    await this.incrementPropertyListCacheVersion();
 
     return property;
   }
@@ -147,6 +150,7 @@ export class PropertiesService {
     // Clear caches
     const key = PropertiesCacheKeys.propertyById(id);
     await this.cacheService.delete(key);
+    await this.incrementPropertyListCacheVersion();
 
     return property;
   }
@@ -155,6 +159,15 @@ export class PropertiesService {
     const page = Math.max(1, pageNumber);
     const normalizedLimit = Math.max(1, Math.min(limit, 50));
     const skip = (page - 1) * normalizedLimit;
+
+    const cacheKey = PropertiesCacheKeys.featured(
+      await this.getPropertyListCacheVersion(),
+      page,
+      normalizedLimit,
+    );
+
+    const cached = await this.cacheService.get(cacheKey);
+    if (cached) return cached;
 
     const [data, total] = await Promise.all([
       this.propertyModel
@@ -168,19 +181,31 @@ export class PropertiesService {
       this.propertyModel.countDocuments({ featured: true }),
     ]);
 
-    return {
+    const result = {
       data,
       total,
       page: pageNumber,
       limit: normalizedLimit,
       totalPage: Math.ceil(total / normalizedLimit),
     };
+
+    await this.cacheService.set(cacheKey, result, 5 * 60 * 1000);
+    return result;
   }
 
   async findLatest(pageNumber = 1, limit = 10) {
     const page = Math.max(1, pageNumber);
     const normalizedLimit = Math.max(1, Math.min(limit, 50));
     const skip = (page - 1) * normalizedLimit;
+
+    const cacheKey = PropertiesCacheKeys.latest(
+      await this.getPropertyListCacheVersion(),
+      page,
+      normalizedLimit,
+    );
+
+    const cached = await this.cacheService.get(cacheKey);
+    if (cached) return cached;
 
     const [data, total] = await Promise.all([
       this.propertyModel
@@ -194,13 +219,16 @@ export class PropertiesService {
       this.propertyModel.countDocuments(),
     ]);
 
-    return {
+    const result = {
       data,
       total,
       page: pageNumber,
       limit: normalizedLimit,
       totalPage: Math.ceil(total / normalizedLimit),
     };
+
+    await this.cacheService.set(cacheKey, result, 5 * 60 * 1000);
+    return result;
   }
 
   async setFeatured(id: string, featured: boolean) {
@@ -218,8 +246,31 @@ export class PropertiesService {
 
     const key = PropertiesCacheKeys.propertyById(id);
     await this.cacheService.delete(key);
+    await this.incrementPropertyListCacheVersion();
 
     return updatedProperty;
+  }
+
+  private async getPropertyListCacheVersion(): Promise<number> {
+    const version = await this.cacheService.get(
+      PropertiesCacheKeys.listVersion,
+    );
+    const parsed = typeof version === 'number' ? version : Number(version);
+
+    if (!parsed || Number.isNaN(parsed)) {
+      await this.cacheService.set(PropertiesCacheKeys.listVersion, 1);
+      return 1;
+    }
+
+    return parsed;
+  }
+
+  private async incrementPropertyListCacheVersion() {
+    const currentVersion = await this.getPropertyListCacheVersion();
+    await this.cacheService.set(
+      PropertiesCacheKeys.listVersion,
+      currentVersion + 1,
+    );
   }
 
   private buildFilters(query: PropertyQueryDto) {
@@ -257,7 +308,8 @@ export class PropertiesService {
     return filters;
   }
 
-  private buildCacheKey(query: PropertyQueryDto) {
+  private async buildCacheKey(query: PropertyQueryDto) {
+    const version = await this.getPropertyListCacheVersion();
     const sorted = Object.keys(query)
       .sort()
       .reduce((obj, key) => {
@@ -265,6 +317,6 @@ export class PropertiesService {
         return obj;
       }, {});
 
-    return `properties:${JSON.stringify(sorted)}`;
+    return PropertiesCacheKeys.queryList(version, JSON.stringify(sorted));
   }
 }

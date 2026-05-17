@@ -8,11 +8,15 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './schemas/category.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { CacheService } from 'src/infrastructure/cache/cache.service';
 
 @Injectable()
 export class CategoriesService {
+  private readonly categoriesListCacheKey = 'categories:all';
+
   constructor(
     @InjectModel(Category.name) private categoryModel: Model<Category>,
+    private readonly cacheService: CacheService,
   ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
@@ -26,11 +30,21 @@ export class CategoriesService {
       ...createCategoryDto,
     });
     category = await category.save();
+    await this.cacheService.delete(this.categoriesListCacheKey);
     return category;
   }
 
-  async findAll() {
+  async findAll(): Promise<Category[]> {
+    const cached = await this.cacheService.get(this.categoriesListCacheKey);
+    if (cached) return cached as Category[];
+
     const categories = await this.categoryModel.find().sort('name');
+    await this.cacheService.set(
+      this.categoriesListCacheKey,
+      categories,
+      60 * 60 * 1000,
+    );
+
     return categories;
   }
 
@@ -51,6 +65,7 @@ export class CategoriesService {
     if (!category)
       throw new NotFoundException('No category found with the provided id');
 
+    await this.cacheService.delete(this.categoriesListCacheKey);
     return category;
   }
 
@@ -59,6 +74,7 @@ export class CategoriesService {
     if (!category)
       throw new NotFoundException('No category found with the provided id');
 
+    await this.cacheService.delete(this.categoriesListCacheKey);
     return category;
   }
 }
