@@ -35,8 +35,9 @@ import { RolesGuard } from 'src/shared/auth/guards/roles.guard';
 export class StatesController {
   constructor(private readonly statesService: StatesService) {}
 
-  @UseGuards(JwtAuthGuard, AdminGuard)
   @Post()
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add a new state in Nigeria ' })
   @ApiConflictResponse({
@@ -51,8 +52,6 @@ export class StatesController {
   }
 
   @Get()
-  @Roles(UserRole.AGENT)
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get all states in the country' })
   @ApiOkResponse({
     description: 'Return list of all states in the country',
@@ -100,8 +99,9 @@ export class StatesController {
     return this.statesService.update(id, updateStateDto);
   }
 
-  @UseGuards(JwtAuthGuard, ObjectIdGuard)
   @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a state by id' })
   @ApiParam({

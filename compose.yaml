@@ -6,6 +6,7 @@ services:
       NODE_ENV: development
       DATABASE_URL: mongodb://db:27017/pick-a-nest-db
       DATABASE_NAME: pick-a-nest-db
+      REDIS_URL: redis://redis:6379
       SECRET: ${SECRET}
       REFRESH_EXPIRES_IN: 30d
       ACCESS_EXPIRES_IN: 45m

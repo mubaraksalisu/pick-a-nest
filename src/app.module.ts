@@ -19,8 +19,7 @@ import * as winston from 'winston';
 import { HttpExceptionFilter } from './shared/filters/httpException.filter';
 import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module';
 import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
-import { CacheModule } from '@nestjs/cache-manager';
-import KeyvRedis from '@keyv/redis';
+import { CacheModule } from './infrastructure/cache/cache.module';
 
 @Module({
   imports: [
@@ -60,17 +59,7 @@ import KeyvRedis from '@keyv/redis';
       ],
       exitOnError: true, // prevent Winston from exiting after logging
     }),
-
-    CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: async () => {
-        return {
-          stores: [new KeyvRedis('redis://localhost:6379')],
-          ttl: 60 * 1000,
-        };
-      },
-    }),
-
+    CacheModule,
     FavoritesModule,
     UsersModule,
     StatesModule,

@@ -74,6 +74,7 @@ NODE_ENV=development
 PORT=3000
 DATABASE_URL=mongodb://localhost:27017/pick-a-nest-db
 DATABASE_NAME=pick-a-nest-db
+REDIS_URL=redis://localhost:6379
 SECRET=your_jwt_secret_here
 REFRESH_EXPIRES_IN=30d
 ACCESS_EXPIRES_IN=45m
@@ -175,7 +176,7 @@ The app reads configuration from `.env` by default. Important variables:
 - Global validation is enforced via `ValidationPipe`.
 - Swagger docs are registered under `/docs`.
 - Winston logs errors to `logs/error.log` and console output.
-- Redis caching is configured at `redis://localhost:6379` when running locally.
+- Redis caching is configured via `REDIS_URL`, with `redis://localhost:6379` as the local default.
 
 ## License
 
