@@ -151,6 +151,77 @@ export class PropertiesService {
     return property;
   }
 
+  async findFeatured(pageNumber = 1, limit = 10) {
+    const page = Math.max(1, pageNumber);
+    const normalizedLimit = Math.max(1, Math.min(limit, 50));
+    const skip = (page - 1) * normalizedLimit;
+
+    const [data, total] = await Promise.all([
+      this.propertyModel
+        .find({ featured: true })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(normalizedLimit)
+        .populate({ path: 'ownerId', select: '-password' })
+        .populate('categoryId')
+        .lean(),
+      this.propertyModel.countDocuments({ featured: true }),
+    ]);
+
+    return {
+      data,
+      total,
+      page: pageNumber,
+      limit: normalizedLimit,
+      totalPage: Math.ceil(total / normalizedLimit),
+    };
+  }
+
+  async findLatest(pageNumber = 1, limit = 10) {
+    const page = Math.max(1, pageNumber);
+    const normalizedLimit = Math.max(1, Math.min(limit, 50));
+    const skip = (page - 1) * normalizedLimit;
+
+    const [data, total] = await Promise.all([
+      this.propertyModel
+        .find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(normalizedLimit)
+        .populate({ path: 'ownerId', select: '-password' })
+        .populate('categoryId')
+        .lean(),
+      this.propertyModel.countDocuments(),
+    ]);
+
+    return {
+      data,
+      total,
+      page: pageNumber,
+      limit: normalizedLimit,
+      totalPage: Math.ceil(total / normalizedLimit),
+    };
+  }
+
+  async setFeatured(id: string, featured: boolean) {
+    const property = await this.propertyModel.findById(id);
+    if (!property)
+      throw new NotFoundException('No property with the provided id found');
+
+    property.featured = featured;
+    await property.save();
+
+    const updatedProperty = await this.propertyModel
+      .findById(id)
+      .populate({ path: 'ownerId', select: '-password' })
+      .populate('categoryId');
+
+    const key = PropertiesCacheKeys.propertyById(id);
+    await this.cacheService.delete(key);
+
+    return updatedProperty;
+  }
+
   private buildFilters(query: PropertyQueryDto) {
     const {
       city,

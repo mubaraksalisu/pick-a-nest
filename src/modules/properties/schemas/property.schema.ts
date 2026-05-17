@@ -114,6 +114,12 @@ export class Property extends Document {
   status: string;
 
   @Prop({
+    type: Boolean,
+    default: false,
+  })
+  featured: boolean;
+
+  @Prop({
     type: String,
     minlength: 5,
     maxlength: 2048,

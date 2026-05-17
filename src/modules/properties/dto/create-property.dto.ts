@@ -151,6 +151,7 @@ export class PropertyResponseDto {
     __v: number;
   };
   status: string;
+  featured: boolean;
   media: string[];
   rentDuration: string;
   propertySize: string;

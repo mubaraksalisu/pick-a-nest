@@ -10,19 +10,24 @@ import {
   UseGuards,
   Query,
   Req,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import {
   CreatePropertyDto,
   PropertyResponseDto,
 } from './dto/create-property.dto';
-import { Request } from 'express';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
+import { Roles } from 'src/shared/auth/decorators/roles.decorator';
+import { UserRole } from 'src/shared/auth/enums/user-role.enum';
+import { RolesGuard } from 'src/shared/auth/guards/roles.guard';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -34,6 +39,7 @@ import { PropertyQueryDto } from './dto/property-query.dto';
 import { GetPropertiesResponseDto } from './dto/get-property-response.dto';
 import { UserResponseDto } from '../users/dto/create-user.dto';
 import { AuthenticatedRequest } from '../auth/dto/auth.dto';
+import { SetFeaturedPropertyDto } from './dto/set-featured-property.dto';
 
 @ApiTags('properties')
 @Controller('properties')
@@ -120,6 +126,59 @@ export class PropertiesController {
     return this.propertiesService.findAll(query);
   }
 
+  @Get('featured')
+  @ApiOperation({ summary: 'Get featured properties with pagination' })
+  @ApiOkResponse({
+    description: 'Return paginated featured properties',
+    type: GetPropertiesResponseDto,
+  })
+  @ApiQuery({
+    name: 'pageNumber',
+    type: Number,
+    description: 'Page number to return for featured properties',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    description: 'Number of featured properties per page (default 10, max 50)',
+    required: false,
+  })
+  featured(
+    @Query('pageNumber', new DefaultValuePipe(1), ParseIntPipe)
+    pageNumber: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe)
+    limit: number,
+  ) {
+    return this.propertiesService.findFeatured(pageNumber, limit);
+  }
+
+  @Get('latest')
+  @ApiOperation({ summary: 'Get latest property listings with pagination' })
+  @ApiOkResponse({
+    description: 'Return paginated latest properties sorted by creation date',
+    type: GetPropertiesResponseDto,
+  })
+  @ApiQuery({
+    name: 'pageNumber',
+    type: Number,
+    description: 'Page number to return for latest properties',
+    required: false,
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    description: 'Number of latest properties per page (default 10, max 50)',
+    required: false,
+  })
+  latest(
+    @Query('pageNumber', new DefaultValuePipe(1), ParseIntPipe)
+    pageNumber: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.propertiesService.findLatest(pageNumber, limit);
+  }
+
   @UseGuards(ObjectIdGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get property by id' })
@@ -165,6 +224,28 @@ export class PropertiesController {
   ) {
     const { _id } = req.user;
     return this.propertiesService.update(id, _id, updatePropertyDto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
+  @Roles(UserRole.ADMIN)
+  @Patch(':id/featured')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Mark or unmark a property as featured' })
+  @ApiOkResponse({
+    description: 'Return property after updating featured status',
+    type: PropertyResponseDto,
+  })
+  @ApiForbiddenResponse({ description: 'Admin privilege required' })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'id of the property to update featured status',
+  })
+  setFeatured(
+    @Param('id') id: string,
+    @Body(ValidationPipe) setFeaturedDto: SetFeaturedPropertyDto,
+  ) {
+    return this.propertiesService.setFeatured(id, setFeaturedDto.featured);
   }
 
   @UseGuards(JwtAuthGuard, ObjectIdGuard)
