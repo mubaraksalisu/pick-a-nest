@@ -184,7 +184,7 @@ export class PropertiesService {
     const result = {
       data,
       total,
-      page: pageNumber,
+      page,
       limit: normalizedLimit,
       totalPage: Math.ceil(total / normalizedLimit),
     };
@@ -222,7 +222,7 @@ export class PropertiesService {
     const result = {
       data,
       total,
-      page: pageNumber,
+      page,
       limit: normalizedLimit,
       totalPage: Math.ceil(total / normalizedLimit),
     };
@@ -277,6 +277,7 @@ export class PropertiesService {
     const {
       city,
       state,
+      categoryId,
       type,
       minPrice,
       maxPrice,
@@ -289,6 +290,7 @@ export class PropertiesService {
 
     if (city) filters.city = new RegExp(city, 'i');
     if (state) filters.state = new RegExp(state, 'i');
+    if (categoryId) filters.categoryId = categoryId;
     if (type) filters.type = type;
     if (bedrooms) filters.bedrooms = { $gte: bedrooms };
     if (bathrooms) filters.bathrooms = { $gte: bathrooms };

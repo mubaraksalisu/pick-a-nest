@@ -93,6 +93,12 @@ export class PropertiesController {
     required: false,
   })
   @ApiQuery({
+    name: 'categoryId',
+    type: String,
+    description: 'filter properties by categoryId',
+    required: false,
+  })
+  @ApiQuery({
     name: 'bedrooms',
     type: Number,
     description: 'filter properties by number of bedrooms',

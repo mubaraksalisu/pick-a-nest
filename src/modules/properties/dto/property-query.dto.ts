@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsOptional, IsEnum } from 'class-validator';
+import { IsOptional, IsEnum, IsMongoId } from 'class-validator';
 
 export class PropertyQueryDto {
   @IsOptional()
@@ -15,6 +15,10 @@ export class PropertyQueryDto {
 
   @IsOptional()
   state?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  categoryId?: string;
 
   @IsOptional()
   @IsEnum(['rent', 'sell'])
