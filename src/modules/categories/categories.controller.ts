@@ -14,8 +14,10 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './schemas/category.schema';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt.guard';
-import { AdminGuard } from 'src/shared/guards/admin.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
+import { Roles } from 'src/shared/auth/decorators/roles.decorator';
+import { UserRole } from 'src/shared/auth/enums/user-role.enum';
+import { RolesGuard } from 'src/shared/auth/guards/roles.guard';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -33,7 +35,8 @@ import { CategoryResponseDto } from './dto/category-response.dto';
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
-  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create new category as admin' })
@@ -77,7 +80,8 @@ export class CategoriesController {
     return this.categoriesService.findOne(id);
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard, ObjectIdGuard)
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
   @Patch(':id')
   @ApiOperation({ summary: 'Update category by id' })
   @ApiBearerAuth()
@@ -100,7 +104,8 @@ export class CategoriesController {
     return this.categoriesService.update(id, updateCategoryDto);
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard, ObjectIdGuard)
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete category by id' })

@@ -13,7 +13,6 @@ import { StatesService } from './states.service';
 import { CreateStateDto } from './dto/create-state.dto';
 import { UpdateStateDto } from './dto/update-state.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt.guard';
-import { AdminGuard } from 'src/shared/guards/admin.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
 import {
   ApiBearerAuth,

@@ -46,22 +46,31 @@ import { SetFeaturedPropertyDto } from './dto/set-featured-property.dto';
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.AGENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new property listing' })
+  @ApiOperation({ summary: 'Create a new property listing (agents only)' })
   @ApiCreatedResponse({
     description: 'Returns the newly created property',
     type: PropertyResponseDto,
   })
+  @ApiForbiddenResponse({ description: 'Agent privilege required' })
   @ApiNotFoundResponse({
-    description: 'No user found with the provided ownerId',
+    description: 'No property owner found for authenticated user',
   })
   @ApiNotFoundResponse({
     description: 'No category found with the provided categoryId',
   })
-  create(@Body(ValidationPipe) createPropertyDto: CreatePropertyDto) {
-    return this.propertiesService.create(createPropertyDto);
+  create(
+    @Body(ValidationPipe) createPropertyDto: CreatePropertyDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const propertyDto = {
+      ...createPropertyDto,
+      ownerId: req.user._id,
+    };
+    return this.propertiesService.create(propertyDto);
   }
 
   @Get()
@@ -204,14 +213,16 @@ export class PropertiesController {
     return this.propertiesService.findOne(id);
   }
 
-  @UseGuards(JwtAuthGuard, ObjectIdGuard)
+  @Roles(UserRole.AGENT)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
   @Patch(':id')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update property details by id' })
+  @ApiOperation({ summary: 'Update property details by id (agents only)' })
   @ApiOkResponse({
     description: 'Return updated property details',
     type: PropertyResponseDto,
   })
+  @ApiForbiddenResponse({ description: 'Agent privilege required' })
   @ApiNotFoundResponse({
     description: 'No category found with the provided categoryId',
   })
@@ -254,7 +265,8 @@ export class PropertiesController {
     return this.propertiesService.setFeatured(id, setFeaturedDto.featured);
   }
 
-  @UseGuards(JwtAuthGuard, ObjectIdGuard)
+  @Roles(UserRole.AGENT)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'delete property details by id' })

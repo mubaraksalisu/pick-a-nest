@@ -23,12 +23,22 @@ export class PropertiesService {
     private cacheService: CacheService,
   ) {}
 
-  async create(createPropertyDto: CreatePropertyDto) {
+  async create(createPropertyDto: CreatePropertyDto, currentUserId?: string) {
+    const ownerId = currentUserId || createPropertyDto.ownerId;
+    if (!ownerId) {
+      throw new Error('Property ownerId is required');
+    }
+
+    const ownerIdString = ownerId;
+
     // These will throw if not found, so no need for manual checks
-    await this.usersService.findOne(createPropertyDto.ownerId);
+    await this.usersService.findOne(ownerIdString);
     await this.categoryModel.findOne(createPropertyDto.categoryId);
 
-    let property = new this.propertyModel({ ...createPropertyDto });
+    let property = new this.propertyModel({
+      ...createPropertyDto,
+      ownerId: ownerIdString,
+    });
     property = await property.save();
 
     await this.incrementPropertyListCacheVersion();
