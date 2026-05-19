@@ -141,6 +141,56 @@ export class PropertiesController {
     return this.propertiesService.findAll(query);
   }
 
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('pending')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all pending properties for admin review' })
+  @ApiOkResponse({
+    description: 'Returns pending properties awaiting review',
+    type: GetPropertiesResponseDto,
+  })
+  pending(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.propertiesService.findPending(page, limit);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
+  @Patch(':id/approve')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve a pending property listing' })
+  @ApiOkResponse({
+    description: 'Returns the approved property',
+    type: PropertyResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No property found with the provided id',
+  })
+  @ApiForbiddenResponse({ description: 'Admin privilege required' })
+  approve(@Param('id') id: string) {
+    return this.propertiesService.approveReview(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, ObjectIdGuard)
+  @Patch(':id/reject')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reject a pending property listing' })
+  @ApiOkResponse({
+    description: 'Returns the rejected property',
+    type: PropertyResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'No property found with the provided id',
+  })
+  @ApiForbiddenResponse({ description: 'Admin privilege required' })
+  reject(@Param('id') id: string) {
+    return this.propertiesService.rejectReview(id);
+  }
+
   @Get('featured')
   @ApiOperation({ summary: 'Get featured properties with pagination' })
   @ApiOkResponse({

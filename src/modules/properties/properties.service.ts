@@ -53,10 +53,11 @@ export class PropertiesService {
 
   async findAll(query: PropertyQueryDto) {
     const cacheKey = await this.buildCacheKey(query);
-    const cachedProperties = await this.cacheService.get(cacheKey);
+    const cachedProperties = await this.cacheService.get<any>(cacheKey);
     if (cachedProperties) return cachedProperties;
 
     const filters = this.buildFilters(query);
+    filters.reviewStatus = 'approved';
 
     const {
       page = 1,
@@ -97,10 +98,13 @@ export class PropertiesService {
     return result;
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, requireApproved = true) {
     const key = PropertiesCacheKeys.propertyById(id);
-    const cachedProperty = await this.cacheService.get(key);
+    const cachedProperty = await this.cacheService.get<any>(key);
     if (cachedProperty) {
+      if (requireApproved && cachedProperty.reviewStatus !== 'approved') {
+        throw new NotFoundException('No property with the provided id');
+      }
       return cachedProperty;
     }
 
@@ -108,7 +112,7 @@ export class PropertiesService {
       .findById(id)
       .populate({ path: 'ownerId', select: '-password' })
       .populate('categoryId');
-    if (!property)
+    if (!property || (requireApproved && property.reviewStatus !== 'approved'))
       throw new NotFoundException('No property with the provided id');
 
     await this.cacheService.set(key, property, 5 * 60 * 1000);
@@ -134,6 +138,9 @@ export class PropertiesService {
       throw new UnauthorizedException('Only property owner can update');
 
     Object.assign(property, updatePropertyDto);
+    if (property.reviewStatus !== 'pending') {
+      property.reviewStatus = 'pending';
+    }
     await property.save();
 
     property = await this.propertyModel
@@ -176,19 +183,19 @@ export class PropertiesService {
       normalizedLimit,
     );
 
-    const cached = await this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get<any>(cacheKey);
     if (cached) return cached;
 
     const [data, total] = await Promise.all([
       this.propertyModel
-        .find({ featured: true })
+        .find({ featured: true, reviewStatus: 'approved' })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(normalizedLimit)
         .populate({ path: 'ownerId', select: '-password' })
         .populate('categoryId')
         .lean(),
-      this.propertyModel.countDocuments({ featured: true }),
+      this.propertyModel.countDocuments({ featured: true, reviewStatus: 'approved' }),
     ]);
 
     const result = {
@@ -214,19 +221,19 @@ export class PropertiesService {
       normalizedLimit,
     );
 
-    const cached = await this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get<any>(cacheKey);
     if (cached) return cached;
 
     const [data, total] = await Promise.all([
       this.propertyModel
-        .find()
+        .find({ reviewStatus: 'approved' })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(normalizedLimit)
         .populate({ path: 'ownerId', select: '-password' })
         .populate('categoryId')
         .lean(),
-      this.propertyModel.countDocuments(),
+      this.propertyModel.countDocuments({ reviewStatus: 'approved' }),
     ]);
 
     const result = {
@@ -247,6 +254,72 @@ export class PropertiesService {
       throw new NotFoundException('No property with the provided id found');
 
     property.featured = featured;
+    await property.save();
+
+    const updatedProperty = await this.propertyModel
+      .findById(id)
+      .populate({ path: 'ownerId', select: '-password' })
+      .populate('categoryId');
+
+    const key = PropertiesCacheKeys.propertyById(id);
+    await this.cacheService.delete(key);
+    await this.incrementPropertyListCacheVersion();
+
+    return updatedProperty;
+  }
+
+  async findPending(pageNumber = 1, limit = 10) {
+    const page = Math.max(1, pageNumber);
+    const normalizedLimit = Math.max(1, Math.min(limit, 50));
+    const skip = (page - 1) * normalizedLimit;
+
+    const [data, total] = await Promise.all([
+      this.propertyModel
+        .find({ reviewStatus: 'pending' })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(normalizedLimit)
+        .populate({ path: 'ownerId', select: '-password' })
+        .populate('categoryId')
+        .lean(),
+      this.propertyModel.countDocuments({ reviewStatus: 'pending' }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit: normalizedLimit,
+      totalPage: Math.ceil(total / normalizedLimit),
+    };
+  }
+
+  async approveReview(id: string) {
+    const property = await this.propertyModel.findById(id);
+    if (!property)
+      throw new NotFoundException('No property with the provided id found');
+
+    property.reviewStatus = 'approved';
+    await property.save();
+
+    const updatedProperty = await this.propertyModel
+      .findById(id)
+      .populate({ path: 'ownerId', select: '-password' })
+      .populate('categoryId');
+
+    const key = PropertiesCacheKeys.propertyById(id);
+    await this.cacheService.delete(key);
+    await this.incrementPropertyListCacheVersion();
+
+    return updatedProperty;
+  }
+
+  async rejectReview(id: string) {
+    const property = await this.propertyModel.findById(id);
+    if (!property)
+      throw new NotFoundException('No property with the provided id found');
+
+    property.reviewStatus = 'rejected';
     await property.save();
 
     const updatedProperty = await this.propertyModel

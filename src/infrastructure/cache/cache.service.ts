@@ -13,8 +13,8 @@ export class CacheService {
     await this.cacheManager.set(key, value, ttl);
   }
 
-  async get(key: string) {
-    return await this.cacheManager.get(key);
+  async get<T = unknown>(key: string): Promise<T | undefined> {
+    return await this.cacheManager.get<T>(key);
   }
 
   async delete(key: string) {

@@ -114,6 +114,13 @@ export class Property extends Document {
   status: string;
 
   @Prop({
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+  })
+  reviewStatus: string;
+
+  @Prop({
     type: Boolean,
     default: false,
   })
@@ -169,6 +176,7 @@ PropertySchema.index({ type: 1 });
 PropertySchema.index({ price: 1 });
 PropertySchema.index({ bedroom: 1 });
 PropertySchema.index({ bathroom: 1 });
+PropertySchema.index({ reviewStatus: 1 });
 PropertySchema.index({ createdAt: -1 });
 
 PropertySchema.index({

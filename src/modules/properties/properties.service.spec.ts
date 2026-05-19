@@ -26,6 +26,7 @@ describe('PropertiesService', () => {
     _id: 'p1',
     title: 'Test property',
     featured: false,
+    reviewStatus: 'approved',
     ownerId: 'u1',
     categoryId: 'c1',
     createdAt: new Date(),
@@ -103,6 +104,29 @@ describe('PropertiesService', () => {
       expect(propertyModel.findById).not.toHaveBeenCalled();
     });
 
+    it('should throw NotFoundException when cached property is not approved', async () => {
+      cacheService.get.mockResolvedValueOnce({
+        ...mockProperty,
+        reviewStatus: 'pending',
+      });
+
+      await expect(service.findOne('p1')).rejects.toThrow(NotFoundException);
+      expect(propertyModel.findById).not.toHaveBeenCalled();
+    });
+
+    it('should return cached property when requireApproved is false', async () => {
+      const pendingProperty = {
+        ...mockProperty,
+        reviewStatus: 'pending',
+      };
+      cacheService.get.mockResolvedValueOnce(pendingProperty);
+
+      const result = await service.findOne('p1', false);
+
+      expect(result).toEqual(pendingProperty);
+      expect(propertyModel.findById).not.toHaveBeenCalled();
+    });
+
     it('should query the database and cache the result when not cached', async () => {
       cacheService.get.mockResolvedValueOnce(null);
       propertyModel.findById.mockReturnValueOnce(
@@ -169,8 +193,8 @@ describe('PropertiesService', () => {
         limit: 10,
       })) as PaginatedProperties;
 
-      expect(propertyModel.find).toHaveBeenCalledWith({});
-      expect(propertyModel.countDocuments).toHaveBeenCalledWith({});
+      expect(propertyModel.find).toHaveBeenCalledWith({ reviewStatus: 'approved' });
+      expect(propertyModel.countDocuments).toHaveBeenCalledWith({ reviewStatus: 'approved' });
       expect(cacheService.set).toHaveBeenCalled();
       expect(result.data).toEqual([mockProperty]);
       expect(result.page).toBe(1);
@@ -209,9 +233,10 @@ describe('PropertiesService', () => {
 
       const result = (await service.findFeatured(1, 10)) as PaginatedProperties;
 
-      expect(propertyModel.find).toHaveBeenCalledWith({ featured: true });
+      expect(propertyModel.find).toHaveBeenCalledWith({ featured: true, reviewStatus: 'approved' });
       expect(propertyModel.countDocuments).toHaveBeenCalledWith({
         featured: true,
+        reviewStatus: 'approved',
       });
       expect(cacheService.set).toHaveBeenCalled();
       expect(result.total).toBe(1);
@@ -253,6 +278,64 @@ describe('PropertiesService', () => {
       expect(result.page).toBe(1);
       expect(result.limit).toBe(50);
       expect(result.total).toBe(1);
+    });
+  });
+
+  describe('findPending', () => {
+    it('should return pending properties only', async () => {
+      const pendingProperty = { ...mockProperty, reviewStatus: 'pending' };
+      const queryChain = createFindQuery([pendingProperty]);
+      propertyModel.find.mockReturnValueOnce(queryChain);
+      propertyModel.countDocuments.mockResolvedValueOnce(1);
+
+      const result = (await service.findPending(1, 10)) as PaginatedProperties;
+
+      expect(propertyModel.find).toHaveBeenCalledWith({ reviewStatus: 'pending' });
+      expect(propertyModel.countDocuments).toHaveBeenCalledWith({ reviewStatus: 'pending' });
+      expect(result.data).toEqual([pendingProperty]);
+      expect(result.total).toBe(1);
+    });
+  });
+
+  describe('approveReview', () => {
+    it('should approve a pending property and invalidate caches', async () => {
+      const existingProperty: any = {
+        ...mockProperty,
+        reviewStatus: 'pending',
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      const approvedProperty = { ...mockProperty, reviewStatus: 'approved' };
+
+      propertyModel.findById
+        .mockReturnValueOnce(existingProperty)
+        .mockReturnValueOnce(createPopulateQuery(approvedProperty));
+
+      const result = (await service.approveReview('p1')) as any;
+
+      expect(existingProperty.save).toHaveBeenCalled();
+      expect(cacheService.delete).toHaveBeenCalledWith('property:p1');
+      expect(result.reviewStatus).toBe('approved');
+    });
+  });
+
+  describe('rejectReview', () => {
+    it('should reject a pending property and invalidate caches', async () => {
+      const existingProperty: any = {
+        ...mockProperty,
+        reviewStatus: 'pending',
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      const rejectedProperty = { ...mockProperty, reviewStatus: 'rejected' };
+
+      propertyModel.findById
+        .mockReturnValueOnce(existingProperty)
+        .mockReturnValueOnce(createPopulateQuery(rejectedProperty));
+
+      const result = (await service.rejectReview('p1')) as any;
+
+      expect(existingProperty.save).toHaveBeenCalled();
+      expect(cacheService.delete).toHaveBeenCalledWith('property:p1');
+      expect(result.reviewStatus).toBe('rejected');
     });
   });
 
