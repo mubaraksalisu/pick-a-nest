@@ -8,6 +8,7 @@ import {
   ValidationPipe,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -25,12 +26,14 @@ import {
   ApiParam,
   ApiQuery,
   ApiTags,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
 import {
   GetUsersResponseDto,
   PaginationDto,
   UserResponseDto,
 } from './dto/create-user.dto';
+import { AuthenticatedRequest } from 'src/modules/auth/dto/auth.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
@@ -71,6 +74,74 @@ export class UsersController {
   @Get(':id')
   findOne(@Param('id') id: string): Promise<User> {
     return this.usersService.findOne(id);
+  }
+
+  @Roles(UserRole.USER)
+  @Patch('apply-agent')
+  @ApiOperation({ summary: 'Apply to become an agent (regular users only)' })
+  @ApiOkResponse({
+    description: 'Return user with pending agent review status',
+    type: UserResponseDto,
+  })
+  applyAgent(@Req() req: AuthenticatedRequest): Promise<User> {
+    return this.usersService.applyForAgentRole(req.user._id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Get('pending-agent-applications')
+  @ApiOperation({ summary: 'Get pending agent applications' })
+  @ApiQuery({
+    name: 'page',
+    description: 'page number',
+    required: false,
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'page size',
+    required: false,
+    type: Number,
+  })
+  @ApiOkResponse({
+    description: 'Returns paginated pending agent applications',
+    type: GetUsersResponseDto,
+  })
+  findPendingAgentApplications(@Query() pagination: PaginationDto) {
+    return this.usersService.findPendingAgentApplications(pagination);
+  }
+
+  @UseGuards(ObjectIdGuard)
+  @Roles(UserRole.ADMIN)
+  @Patch(':id/approve-agent')
+  @ApiOperation({ summary: 'Approve a user to agent status' })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'ID of the user to approve',
+  })
+  @ApiOkResponse({
+    description: 'Return the updated user document',
+    type: UserResponseDto,
+  })
+  approveAgent(@Param('id') id: string): Promise<User> {
+    return this.usersService.approveAgent(id);
+  }
+
+  @UseGuards(ObjectIdGuard)
+  @Roles(UserRole.ADMIN)
+  @Patch(':id/reject-agent')
+  @ApiOperation({ summary: 'Reject a user agent application' })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    description: 'ID of the user to reject',
+  })
+  @ApiOkResponse({
+    description: 'Return the updated user document',
+    type: UserResponseDto,
+  })
+  rejectAgent(@Param('id') id: string): Promise<User> {
+    return this.usersService.rejectAgent(id);
   }
 
   @UseGuards(ObjectIdGuard)

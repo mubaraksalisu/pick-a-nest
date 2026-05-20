@@ -48,6 +48,13 @@ export class User extends Document {
 
   @Prop({
     type: String,
+    enum: ['none', 'pending', 'approved', 'rejected'],
+    default: 'none',
+  })
+  agentReviewStatus: 'none' | 'pending' | 'approved' | 'rejected';
+
+  @Prop({
+    type: String,
     minlength: 5,
     maxlength: 20,
     required: true,

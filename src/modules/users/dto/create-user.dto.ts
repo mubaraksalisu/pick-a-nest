@@ -60,6 +60,7 @@ export class UserResponseDto {
   lastName: string;
   email: string;
   role: string;
+  agentReviewStatus: string;
   phone: string;
   status: string;
   imageUrl: string;

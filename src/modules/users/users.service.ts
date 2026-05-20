@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -56,6 +57,77 @@ export class UsersService {
   async findByEmail(email: string) {
     const user = await this.userModel.findOne({ email });
     return user;
+  }
+
+  async applyForAgentRole(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user)
+      throw new NotFoundException('User with the provided id not found');
+
+    if (user.role !== 'user')
+      throw new BadRequestException(
+        'Only regular users can apply for agent review',
+      );
+
+    user.agentReviewStatus = 'pending';
+    await user.save();
+
+    return (await this.userModel
+      .findById(user._id)
+      .select('-password')) as User;
+  }
+
+  async findPendingAgentApplications({
+    page,
+    limit,
+  }: {
+    page: number;
+    limit: number;
+  }) {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.userModel
+        .find({ agentReviewStatus: 'pending' })
+        .skip(skip)
+        .limit(limit)
+        .select('-password'),
+      this.userModel.countDocuments({ agentReviewStatus: 'pending' }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    };
+  }
+
+  async approveAgent(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user)
+      throw new NotFoundException('User with the provided id not found');
+
+    user.role = 'agent';
+    user.agentReviewStatus = 'approved';
+    await user.save();
+
+    return (await this.userModel
+      .findById(user._id)
+      .select('-password')) as User;
+  }
+
+  async rejectAgent(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user)
+      throw new NotFoundException('User with the provided id not found');
+
+    user.agentReviewStatus = 'rejected';
+    await user.save();
+
+    return (await this.userModel
+      .findById(user._id)
+      .select('-password')) as User;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
