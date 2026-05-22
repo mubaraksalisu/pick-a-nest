@@ -20,6 +20,8 @@ describe('AuthService', () => {
     _id: 'userId',
     email: 'email',
     password: 'hashedPassword',
+    role: 'user',
+    status: 'active',
   };
 
   beforeEach(async () => {
@@ -87,6 +89,8 @@ describe('AuthService', () => {
       expect(result).toEqual({
         _id: 'userId',
         email: 'email',
+        role: 'user',
+        status: 'active',
       });
     });
 
@@ -122,12 +126,17 @@ describe('AuthService', () => {
       (jwtService.sign as jest.Mock)
         .mockReturnValueOnce(mockRefreshToken)
         .mockReturnValueOnce(mockAccessToken);
-
-      (configService.get as jest.Mock).mockReturnValue('1h');
+      (configService.get as jest.Mock).mockImplementation((key: string) => {
+        if (key === 'REFRESH_EXPIRES_IN') return '30d';
+        if (key === 'ACCESS_EXPIRES_IN') return '1h';
+        return undefined;
+      });
 
       const result = await service.login(mockUser);
 
       expect(jwtService.sign).toHaveBeenCalledTimes(2);
+      expect(configService.get).toHaveBeenCalledWith('REFRESH_EXPIRES_IN');
+      expect(configService.get).toHaveBeenCalledWith('ACCESS_EXPIRES_IN');
       expect(refreshTokenService.createToken).toHaveBeenCalledWith(
         mockUser._id,
         mockRefreshToken,
@@ -138,18 +147,29 @@ describe('AuthService', () => {
         refreshToken: mockRefreshToken,
       });
     });
+
+    it('should throw UnauthorizedException when account is suspended', async () => {
+      await expect(
+        service.login({ ...mockUser, status: 'suspended' } as any),
+      ).rejects.toThrow('User account suspended');
+    });
   });
 
   describe('register', () => {
     it('should create a new user and return tokens', async () => {
       const mockAccessToken = 'accessToken';
       const mockRefreshToken = 'refreshToken';
+      const createdUser = { ...mockUser, status: 'active', role: 'user' };
 
-      (usersService.create as jest.Mock).mockResolvedValue(mockUser);
+      (usersService.create as jest.Mock).mockResolvedValue(createdUser);
       (jwtService.sign as jest.Mock)
         .mockReturnValueOnce(mockRefreshToken)
         .mockReturnValueOnce(mockAccessToken);
-      (configService.get as jest.Mock).mockReturnValue('1h');
+      (configService.get as jest.Mock).mockImplementation((key: string) => {
+        if (key === 'REFRESH_EXPIRES_IN') return '30d';
+        if (key === 'ACCESS_EXPIRES_IN') return '1h';
+        return undefined;
+      });
 
       const result = await service.register({
         firstName: 'First',
@@ -164,13 +184,13 @@ describe('AuthService', () => {
         lastName: 'Last',
         phone: '1234567890',
         email: 'email',
-        password: expect.any(String),
+        password: 'password',
       });
       expect(jwtService.sign).toHaveBeenCalledTimes(2);
       expect(result).toEqual({
         accessToken: mockAccessToken,
         refreshToken: mockRefreshToken,
-        user: mockUser,
+        user: createdUser,
       });
     });
   });
@@ -220,6 +240,33 @@ describe('AuthService', () => {
       await expect(service.refresh('invalidRefreshToken')).rejects.toThrow(
         UnauthorizedException,
       );
+    });
+
+    it('should throw UnauthorizedException when validateToken returns false', async () => {
+      (jwtService.verify as jest.Mock).mockReturnValue({ sub: 'userId' });
+      (refreshTokenService.validateToken as jest.Mock).mockResolvedValue(false);
+
+      await expect(service.refresh('validRefreshToken')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+  });
+
+  describe('logout', () => {
+    it('should ignore invalid tokens and not throw', async () => {
+      (jwtService.verify as jest.Mock).mockImplementation(() => {
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      });
+
+      await expect(service.logout('badToken')).resolves.toBeUndefined();
+    });
+
+    it('should revoke the token when it is valid', async () => {
+      (jwtService.verify as jest.Mock).mockReturnValue({ sub: 'userId' });
+
+      await service.logout('validToken');
+
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith('userId');
     });
   });
 });
