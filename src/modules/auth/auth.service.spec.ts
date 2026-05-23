@@ -1,6 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
-import { RefreshTokenService } from 'src/modules/refresh-token/refresh-token.service';
+import { RefreshTokenService } from 'src/modules/auth/refresh-token/refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/modules/users/users.service';
 import { Test, TestingModule } from '@nestjs/testing';

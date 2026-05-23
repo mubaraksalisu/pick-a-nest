@@ -18,7 +18,7 @@ import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { HttpExceptionFilter } from './shared/filters/httpException.filter';
 import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module';
-import { RefreshTokenModule } from './modules/refresh-token/refresh-token.module';
+import { RefreshTokenModule } from './modules/auth/refresh-token/refresh-token.module';
 import { CacheModule } from './infrastructure/cache/cache.module';
 
 @Module({

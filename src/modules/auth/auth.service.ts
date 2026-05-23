@@ -3,7 +3,7 @@ import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto, UserResponseDto } from '../users/dto/create-user.dto';
-import { RefreshTokenService } from 'src/modules/refresh-token/refresh-token.service';
+import { RefreshTokenService } from 'src/modules/auth/refresh-token/refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/modules/users/users.service';
 
