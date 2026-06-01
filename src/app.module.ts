@@ -20,6 +20,7 @@ import { HttpExceptionFilter } from './shared/filters/httpException.filter';
 import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module';
 import { RefreshTokenModule } from './modules/auth/refresh-token/refresh-token.module';
 import { CacheModule } from './infrastructure/cache/cache.module';
+import { MailModule } from './infrastructure/mail/mail.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { CacheModule } from './infrastructure/cache/cache.module';
     TerminusModule,
     AgentReviewsModule,
     RefreshTokenModule,
+    MailModule,
   ],
   providers: [
     {
