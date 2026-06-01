@@ -130,6 +130,19 @@ export class UsersService {
       .select('-password')) as User;
   }
 
+  async activateUser(id: string) {
+    const user = await this.userModel.findById(id);
+    if (!user)
+      throw new NotFoundException('User with the provided id not found');
+
+    user.status = 'active';
+    user.emailVerified = true;
+    user.emailVerifiedAt = new Date();
+    await user.save();
+
+    return true;
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.userModel
       .findByIdAndUpdate(id, updateUserDto, {

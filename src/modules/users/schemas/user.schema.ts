@@ -64,7 +64,7 @@ export class User extends Document {
   @Prop({
     type: String,
     enum: ['active', 'suspended', 'deactivated'],
-    default: 'active',
+    default: 'deactivated',
   })
   status: 'active' | 'suspended' | 'deactivated';
 
@@ -74,6 +74,17 @@ export class User extends Document {
     maxlength: 2048,
   })
   imageUrl: string;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  emailVerified: boolean;
+
+  @Prop({
+    type: Date,
+  })
+  emailVerifiedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -6,14 +6,19 @@ import { CreateUserDto, UserResponseDto } from '../users/dto/create-user.dto';
 import { RefreshTokenService } from 'src/modules/auth/refresh-token/refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/modules/users/users.service';
+import { createHash, randomBytes } from 'crypto';
+import { EmailVerificationService } from './email-verification/email-verification.service';
+import { MailService } from 'src/infrastructure/mail/mail.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private refreshTokenService: RefreshTokenService,
+    private emailVerificationService: EmailVerificationService,
     private configService: ConfigService,
     private usersService: UsersService,
+    private mailService: MailService,
   ) {}
 
   async validateUser({ email, password }: AuthPayloadDto) {
@@ -27,7 +32,9 @@ export class AuthService {
 
   async login(user: any) {
     if (user.status !== 'active')
-      throw new UnauthorizedException('User account suspended');
+      throw new UnauthorizedException(
+        'User account inactive. perhaps you are yet to verify your email address',
+      );
 
     const payload = { sub: user._id, role: user.role, email: user.email };
     const refreshToken = this.jwtService.sign(payload, {
@@ -49,9 +56,17 @@ export class AuthService {
 
   async register(createUserDto: CreateUserDto) {
     const newUser = await this.usersService.create(createUserDto);
-    const { accessToken, refreshToken } = await this.login(newUser);
+    const rawToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(rawToken).digest('hex');
 
-    return { accessToken, refreshToken, user: newUser };
+    await this.emailVerificationService.create(
+      newUser._id.toString(),
+      hashedToken,
+      new Date(Date.now() + 1 * 60 * 60 * 1000), // expires in 1 hour
+    );
+    await this.mailService.sendVerificationEmail(newUser.email, rawToken);
+
+    return newUser;
   }
 
   async refresh(token: string) {
@@ -73,6 +88,24 @@ export class AuthService {
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+  }
+
+  async verifyEmail(token: string) {
+    const hashedToken = createHash('sha256').update(token).digest('hex');
+    const emailVerification =
+      await this.emailVerificationService.validateToken(hashedToken);
+    if (!emailVerification) {
+      throw new UnauthorizedException(
+        'Invalid or expired email verification token',
+      );
+    }
+
+    await this.usersService.activateUser(emailVerification.userId.toString());
+    await this.emailVerificationService.deleteToken(
+      emailVerification._id.toString(),
+    );
+
+    return { message: 'Email verified successfully. You can now log in.' };
   }
 
   async logout(token: string) {

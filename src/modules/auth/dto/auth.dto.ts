@@ -29,12 +29,6 @@ export class AuthenticatedRequest extends Request {
   user: UserResponseDto;
 }
 
-export class RegisterationDto {
-  accessToken: string;
-  refreshToken: string;
-  user: UserResponseDto;
-}
-
 export class RefreshDto {
   refreshToken: string;
 }

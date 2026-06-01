@@ -21,6 +21,7 @@ import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module
 import { RefreshTokenModule } from './modules/auth/refresh-token/refresh-token.module';
 import { CacheModule } from './infrastructure/cache/cache.module';
 import { MailModule } from './infrastructure/mail/mail.module';
+import { EmailVerificationModule } from './modules/auth/email-verification/email-verification.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { MailModule } from './infrastructure/mail/mail.module';
     AgentReviewsModule,
     RefreshTokenModule,
     MailModule,
+    EmailVerificationModule,
   ],
   providers: [
     {

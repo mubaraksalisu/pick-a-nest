@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   UseGuards,
   ValidationPipe,
@@ -21,15 +22,11 @@ import {
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import {
-  AuthPayloadDto,
-  LoginDto,
-  RefreshDto,
-  RegisterationDto,
-} from './dto/auth.dto';
+import { AuthPayloadDto, LoginDto, RefreshDto } from './dto/auth.dto';
 
 @Throttle({ default: { limit: 10, ttl: 60000 } })
 @ApiTags('auth')
@@ -56,7 +53,7 @@ export class AuthController {
   })
   @ApiCreatedResponse({
     description: 'Create a new user',
-    type: RegisterationDto,
+    type: UserResponseDto,
   })
   @ApiConflictResponse({ description: 'user with this email already exist.' })
   register(@Body(ValidationPipe) createUserDto: CreateUserDto) {
@@ -93,5 +90,23 @@ export class AuthController {
   @ApiBody({ type: RefreshDto })
   logout(@Body('refreshToken') token: string) {
     return this.authService.logout(token);
+  }
+
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Verify user email' })
+  @ApiOkResponse({
+    description: 'Email verified successfully. You can now log in.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid or expired verification token',
+  })
+  @ApiQuery({
+    name: 'token',
+    description: 'Email verification token sent to user email',
+    required: true,
+    type: String,
+  })
+  async verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
   }
 }

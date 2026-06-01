@@ -5,6 +5,7 @@ import {
   EmailVerification,
   EmailVerificationSchema,
 } from './email-verification.schema';
+import { EmailVerificationService } from './email-verification.service';
 
 @Module({
   imports: [
@@ -13,5 +14,7 @@ import {
     ]),
     UsersModule,
   ],
+  providers: [EmailVerificationService],
+  exports: [EmailVerificationService],
 })
 export class EmailVerificationModule {}
