@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -8,7 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/modules/users/users.service';
 import { createHash, randomBytes } from 'crypto';
 import { EmailVerificationService } from './email-verification/email-verification.service';
-import { MailService } from 'src/infrastructure/mail/mail.service';
+import { QueuesService } from 'src/infrastructure/queues/queues.service';
+import { EMAIL_JOBS } from 'src/infrastructure/queues/queue.constants';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +19,7 @@ export class AuthService {
     private emailVerificationService: EmailVerificationService,
     private configService: ConfigService,
     private usersService: UsersService,
-    private mailService: MailService,
+    private readonly queueService: QueuesService,
   ) {}
 
   async validateUser({ email, password }: AuthPayloadDto) {
@@ -64,7 +65,10 @@ export class AuthService {
       hashedToken,
       new Date(Date.now() + 1 * 60 * 60 * 1000), // expires in 1 hour
     );
-    await this.mailService.sendVerificationEmail(newUser.email, rawToken);
+    await this.queueService.queueEmail(EMAIL_JOBS.EMAIL_VERIFICATION, {
+      email: newUser.email,
+      token: rawToken,
+    });
 
     return newUser;
   }

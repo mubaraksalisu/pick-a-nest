@@ -22,6 +22,7 @@ import { RefreshTokenModule } from './modules/auth/refresh-token/refresh-token.m
 import { CacheModule } from './infrastructure/cache/cache.module';
 import { MailModule } from './infrastructure/mail/mail.module';
 import { EmailVerificationModule } from './modules/auth/email-verification/email-verification.module';
+import { QueuesModule } from './infrastructure/queues/queues.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { EmailVerificationModule } from './modules/auth/email-verification/email
     RefreshTokenModule,
     MailModule,
     EmailVerificationModule,
+    QueuesModule,
   ],
   providers: [
     {
