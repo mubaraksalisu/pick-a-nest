@@ -1,7 +1,5 @@
 import { Transform, Type } from 'class-transformer';
 import {
-  ArrayMinSize,
-  IsArray,
   IsEnum,
   IsMongoId,
   IsNotEmpty,
@@ -45,6 +43,7 @@ export class CreatePropertyDto {
   @MaxLength(50)
   state: string;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   @IsNotEmpty()
@@ -56,22 +55,27 @@ export class CreatePropertyDto {
   @Transform(({ value }) => value || 'rent')
   transactionType: string;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   bedroom: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(1)
   bathroom: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   livingRoom: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   parkingSpace: number;
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   pool: number;
@@ -95,12 +99,6 @@ export class CreatePropertyDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   virtualTourLink?: string;
-
-  @IsArray({ message: 'Must be an array' })
-  @ArrayMinSize(1, { message: 'Array must contain at least 1 item' })
-  @IsUrl({}, { each: true, message: 'Each item must be a valid URL' })
-  @Type(() => String)
-  media: string[];
 
   @IsString()
   @IsEnum(['daily', 'weekly', 'monthly', 'yearly'])

@@ -12,7 +12,14 @@ import {
   Req,
   DefaultValuePipe,
   ParseIntPipe,
+  UploadedFiles,
+  UseInterceptors,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+  BadRequestException,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { PropertiesService } from './properties.service';
 import {
   CreatePropertyDto,
@@ -26,6 +33,8 @@ import { UserRole } from 'src/shared/auth/enums/user-role.enum';
 import { RolesGuard } from 'src/shared/auth/guards/roles.guard';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -37,9 +46,10 @@ import {
 } from '@nestjs/swagger';
 import { PropertyQueryDto } from './dto/property-query.dto';
 import { GetPropertiesResponseDto } from './dto/get-property-response.dto';
-import { UserResponseDto } from '../users/dto/create-user.dto';
 import { AuthenticatedRequest } from '../auth/dto/auth.dto';
 import { SetFeaturedPropertyDto } from './dto/set-featured-property.dto';
+import { memoryStorage } from 'multer';
+import { SwaggerUploadDto } from './dto/swagger-upload.dto';
 
 @ApiTags('properties')
 @Controller('properties')
@@ -48,6 +58,7 @@ export class PropertiesController {
 
   @Roles(UserRole.AGENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(FilesInterceptor('media', 10, { storage: memoryStorage() }))
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new property listing (agents only)' })
@@ -62,15 +73,33 @@ export class PropertiesController {
   @ApiNotFoundResponse({
     description: 'No category found with the provided categoryId',
   })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Data for creating a new property listing',
+    type: SwaggerUploadDto,
+  })
   create(
     @Body(ValidationPipe) createPropertyDto: CreatePropertyDto,
+    @UploadedFiles(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: 'image/(jpeg|png|webp)' }),
+        ],
+        exceptionFactory: () =>
+          new BadRequestException(
+            'Images must be JPG, JPEG, PNG, or WEBP and no larger than 5MB.',
+          ),
+      }),
+    )
+    files: Array<Express.Multer.File>,
     @Req() req: AuthenticatedRequest,
   ) {
     const propertyDto = {
       ...createPropertyDto,
       ownerId: req.user._id,
     };
-    return this.propertiesService.create(propertyDto);
+    return this.propertiesService.create(propertyDto, files);
   }
 
   @Get()

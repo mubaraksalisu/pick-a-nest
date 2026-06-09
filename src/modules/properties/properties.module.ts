@@ -5,11 +5,13 @@ import { UsersModule } from 'src/modules/users/users.module';
 import { CategoriesModule } from 'src/modules/categories/categories.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Property, PropertySchema } from './schemas/property.schema';
+import { AwsS3Module } from 'src/infrastructure/aws-s3/aws-s3.module';
 
 @Module({
   imports: [
     UsersModule,
     CategoriesModule,
+    AwsS3Module,
     MongooseModule.forFeature([
       { name: Property.name, schema: PropertySchema },
     ]),

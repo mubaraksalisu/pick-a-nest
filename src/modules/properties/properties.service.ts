@@ -13,6 +13,7 @@ import { CategoriesService } from 'src/modules/categories/categories.service';
 import { PropertyQueryDto } from './dto/property-query.dto';
 import { CacheService } from 'src/infrastructure/cache/cache.service';
 import { PropertiesCacheKeys } from 'src/infrastructure/cache/cache.keys';
+import { AwsS3Service } from 'src/infrastructure/aws-s3/aws-s3.service';
 
 @Injectable()
 export class PropertiesService {
@@ -21,9 +22,14 @@ export class PropertiesService {
     private usersService: UsersService,
     private categoryModel: CategoriesService,
     private cacheService: CacheService,
+    private awsS3Service: AwsS3Service,
   ) {}
 
-  async create(createPropertyDto: CreatePropertyDto, currentUserId?: string) {
+  async create(
+    createPropertyDto: CreatePropertyDto,
+    images: Array<Express.Multer.File>,
+    currentUserId?: string,
+  ) {
     const ownerId = currentUserId || createPropertyDto.ownerId;
     if (!ownerId) {
       throw new Error('Property ownerId is required');
@@ -35,9 +41,17 @@ export class PropertiesService {
     await this.usersService.findOne(ownerIdString);
     await this.categoryModel.findOne(createPropertyDto.categoryId);
 
+    // get image urls from s3
+    const imageUrls = await Promise.all(
+      images.map(async (file) => {
+        return this.awsS3Service.uploadFile(file);
+      }),
+    );
+
     let property = new this.propertyModel({
       ...createPropertyDto,
       ownerId: ownerIdString,
+      media: imageUrls.map((img) => img.url),
     });
     property = await property.save();
 
@@ -195,7 +209,10 @@ export class PropertiesService {
         .populate({ path: 'ownerId', select: '-password' })
         .populate('categoryId')
         .lean(),
-      this.propertyModel.countDocuments({ featured: true, reviewStatus: 'approved' }),
+      this.propertyModel.countDocuments({
+        featured: true,
+        reviewStatus: 'approved',
+      }),
     ]);
 
     const result = {

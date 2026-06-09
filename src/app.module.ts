@@ -23,6 +23,7 @@ import { CacheModule } from './infrastructure/cache/cache.module';
 import { MailModule } from './infrastructure/mail/mail.module';
 import { EmailVerificationModule } from './modules/auth/email-verification/email-verification.module';
 import { QueuesModule } from './infrastructure/queues/queues.module';
+import { AwsS3Module } from './infrastructure/aws-s3/aws-s3.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { QueuesModule } from './infrastructure/queues/queues.module';
     MailModule,
     EmailVerificationModule,
     QueuesModule,
+    AwsS3Module,
   ],
   providers: [
     {
