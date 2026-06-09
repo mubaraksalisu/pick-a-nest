@@ -1,63 +1,30 @@
 # Pick-a-Nest
 
-A NestJS-based real estate backend API built with TypeScript, MongoDB, Redis, JWT authentication, Swagger docs, and structured logging.
+A NestJS-based real estate backend API implemented in TypeScript. This repository provides a modular server with authentication, property management, caching, background jobs, health checks, and API documentation.
 
-## Overview
+**Quick links**
 
-`pick-a-nest` is designed as a complete backend for a property marketplace. It includes support for users, auth, properties, states, categories, favorites, visits, reviews, caching, rate limiting, health checks, and API documentation.
+- **API docs:** http://localhost:3000/docs
+- **Compose:** `compose.yaml` for local development
 
-## Key features
+**Status:** Prototype / development
+
+## Features
 
 - Modular NestJS architecture
 - MongoDB persistence via Mongoose
-- Redis-backed caching for fast responses
-- JWT authentication with access and refresh tokens
-- Passport local + JWT strategies
-- API documentation at `/docs`
+- Redis-backed caching
+- JWT access + refresh tokens
+- Passport strategies (local + jwt)
+- Swagger documentation at `/docs`
 - Global validation and exception handling
-- Rate limiting using `@nestjs/throttler`
-- Production-grade logging with `winston`
-- Health checks via `@nestjs/terminus`
+- Rate limiting via `@nestjs/throttler`
+- Structured logging with `winston`
 - Jest + Supertest test setup
 
-## Project structure
+## Quick start
 
-Top-level modules include:
-
-- `src/modules/auth` — authentication, login, and token handling
-- `src/modules/users` — user registration and management
-- `src/modules/properties` — property CRUD and listing
-- `src/modules/categories` — property categories
-- `src/modules/states` — geographic state management
-- `src/modules/favorites` — favorite listings for users
-- `src/modules/visits` — visit scheduling or tracking
-- `src/modules/property-reviews` — reviews for properties
-- `src/modules/agent-reviews` — reviews for agents
-- `src/modules/refresh-token` — refresh token persistence
-- `src/modules/health` — readiness and liveness checks
-- `src/shared` — global filters, guards, and utilities
-
-## Tech stack
-
-- Node.js 24
-- NestJS 11
-- TypeScript
-- MongoDB via Mongoose
-- Redis cache via `@keyv/redis`
-- Swagger UI (`@nestjs/swagger`)
-- JWT auth with `passport-jwt`
-- Winston logging
-- Jest + Supertest for tests
-- ESLint + Prettier for formatting and linting
-
-## Prerequisites
-
-- Node.js 24+ and npm
-- MongoDB
-- Redis
-- Docker and Docker Compose (optional)
-
-## Setup
+Prerequisites: Node.js 24+, npm, MongoDB, Redis (or Docker).
 
 1. Install dependencies
 
@@ -65,9 +32,7 @@ Top-level modules include:
 npm install
 ```
 
-2. Create a `.env` file in the project root
-
-Example `.env`:
+2. Create a `.env` file (copy `.env.example` if present) and set values. Example:
 
 ```env
 NODE_ENV=development
@@ -75,20 +40,12 @@ PORT=3000
 DATABASE_URL=mongodb://localhost:27017/pick-a-nest-db
 DATABASE_NAME=pick-a-nest-db
 REDIS_URL=redis://localhost:6379
-SECRET=your_jwt_secret_here
+SECRET=change_this_secret
 REFRESH_EXPIRES_IN=30d
 ACCESS_EXPIRES_IN=45m
 ```
 
-> Tests run with `NODE_ENV=test` and load `.env.test` when present.
-
-## Running the app
-
-```bash
-npm run start
-```
-
-For hot reload during development:
+3. Run the app (development)
 
 ```bash
 npm run start:dev
@@ -101,29 +58,40 @@ npm run build
 npm run start:prod
 ```
 
-The app listens on the port defined by `PORT` or `3000` by default.
+Available scripts are defined in [package.json](package.json).
 
-## Docker
+## Docker (local development)
 
-Build and run the container locally:
+Start services with Docker Compose:
 
 ```bash
 docker compose up --build
 ```
 
-This starts:
+The `compose.yaml` defines three services: `server`, `db` (MongoDB), and `redis`.
 
-- `server` on port `3000`
-- `db` MongoDB service on port `27017`
-- `redis` on port `6379`
+Notes about the `Dockerfile`:
 
-The current `Dockerfile` is configured to run the app in development mode with `npm run start:dev`. If you need a production container, adjust the Dockerfile CMD or run `npm run start:prod` inside the image.
+- The container currently runs the development command `npm run start:dev` by default. See [Dockerfile](Dockerfile) to adjust for production.
+
+## Configuration
+
+The app reads configuration from environment variables. Important variables:
+
+- `NODE_ENV` — environment mode (`development`, `production`, `test`)
+- `PORT` — HTTP server port (default `3000`)
+- `DATABASE_URL` — MongoDB connection string
+- `DATABASE_NAME` — MongoDB database name
+- `REDIS_URL` — Redis connection string
+- `SECRET` — JWT signing secret
+- `REFRESH_EXPIRES_IN` — refresh token TTL
+- `ACCESS_EXPIRES_IN` — access token TTL
 
 ## API documentation
 
-Open the Swagger UI at:
+Swagger UI is available at `/docs` when the server is running. Open:
 
-```text
+```
 http://localhost:3000/docs
 ```
 
@@ -149,38 +117,36 @@ npm run test:cov
 
 ## Code quality
 
-Format source files:
+Format and lint:
 
 ```bash
 npm run format
-```
-
-Run linting and auto-fix issues:
-
-```bash
 npm run lint
 ```
 
-## Environment variables
+## Project layout
 
-The app reads configuration from `.env` by default. Important variables:
+Top-level source folders:
 
-- `NODE_ENV` — environment mode
-- `PORT` — HTTP server port
-- `DATABASE_URL` — MongoDB connection string
-- `DATABASE_NAME` — MongoDB database name
-- `REDIS_URL` — Redis connection string
-- `SECRET` — JWT secret key
-- `REFRESH_EXPIRES_IN` — refresh token TTL
-- `ACCESS_EXPIRES_IN` — access token TTL
+- `src/modules` — feature modules (auth, users, properties, categories, states, favorites, visits, reviews, etc.)
+- `src/infrastructure` — platform integrations (AWS S3, cache, mail, queues)
+- `src/shared` — guards, filters, and utilities
+- `test` — e2e test suites
 
-## Notes
+## Contributing
 
-- Global validation is enforced via `ValidationPipe`.
-- Swagger docs are registered under `/docs`.
-- Winston logs errors to `logs/error.log` and console output.
-- Redis caching is configured via `REDIS_URL`, with `redis://localhost:6379` as the local default.
+If you'd like to contribute, please open an issue or a pull request. Include a short description of the change and relevant tests.
 
 ## License
 
-This repository is currently marked as `UNLICENSED` in `package.json`.
+This repository is currently marked as `UNLICENSED` in [package.json](package.json). If you want to add a license, update `package.json` and add a `LICENSE` file.
+
+---
+
+If you'd like, I can also:
+
+- Add a `.env.example` file based on the variables above
+- Add a short `CONTRIBUTING.md` with local development steps
+- Update the `Dockerfile` to include a production image target
+
+Tell me which of those you'd like next.
