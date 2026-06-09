@@ -25,11 +25,7 @@ export class PropertiesService {
     private awsS3Service: AwsS3Service,
   ) {}
 
-  async create(
-    createPropertyDto: CreatePropertyDto,
-    images: Array<Express.Multer.File>,
-    currentUserId?: string,
-  ) {
+  async create(createPropertyDto: CreatePropertyDto, currentUserId?: string) {
     const ownerId = currentUserId || createPropertyDto.ownerId;
     if (!ownerId) {
       throw new Error('Property ownerId is required');
@@ -41,17 +37,12 @@ export class PropertiesService {
     await this.usersService.findOne(ownerIdString);
     await this.categoryModel.findOne(createPropertyDto.categoryId);
 
-    // get image urls from s3
-    const imageUrls = await Promise.all(
-      images.map(async (file) => {
-        return this.awsS3Service.uploadFile(file);
-      }),
-    );
+    const media = createPropertyDto.media ?? [];
 
     let property = new this.propertyModel({
       ...createPropertyDto,
       ownerId: ownerIdString,
-      media: imageUrls.map((img) => img.url),
+      media,
     });
     property = await property.save();
 
@@ -62,7 +53,7 @@ export class PropertiesService {
       .populate({ path: 'ownerId', select: '-password' })
       .populate('categoryId');
 
-    return populatedProperty;
+    return this.formatPropertyMedia(populatedProperty);
   }
 
   async findAll(query: PropertyQueryDto) {
@@ -100,7 +91,7 @@ export class PropertiesService {
     ]);
 
     const result = {
-      data,
+      data: data.map((item) => this.formatPropertyMedia(item)),
       total,
       page,
       limit,
@@ -128,6 +119,10 @@ export class PropertiesService {
       .populate('categoryId');
     if (!property || (requireApproved && property.reviewStatus !== 'approved'))
       throw new NotFoundException('No property with the provided id');
+
+    property.media = property.media.map((key) =>
+      this.awsS3Service.getPublicUrl(key),
+    );
 
     await this.cacheService.set(key, property, 5 * 60 * 1000);
 
@@ -167,7 +162,7 @@ export class PropertiesService {
     await this.cacheService.delete(key);
     await this.incrementPropertyListCacheVersion();
 
-    return property;
+    return this.formatPropertyMedia(property);
   }
 
   async remove(id: string) {
@@ -183,7 +178,7 @@ export class PropertiesService {
     await this.cacheService.delete(key);
     await this.incrementPropertyListCacheVersion();
 
-    return property;
+    return this.formatPropertyMedia(property);
   }
 
   async findFeatured(pageNumber = 1, limit = 10) {
@@ -216,7 +211,7 @@ export class PropertiesService {
     ]);
 
     const result = {
-      data,
+      data: data.map((item) => this.formatPropertyMedia(item)),
       total,
       page,
       limit: normalizedLimit,
@@ -254,7 +249,7 @@ export class PropertiesService {
     ]);
 
     const result = {
-      data,
+      data: data.map((item) => this.formatPropertyMedia(item)),
       total,
       page,
       limit: normalizedLimit,
@@ -282,7 +277,7 @@ export class PropertiesService {
     await this.cacheService.delete(key);
     await this.incrementPropertyListCacheVersion();
 
-    return updatedProperty;
+    return this.formatPropertyMedia(updatedProperty);
   }
 
   async findPending(pageNumber = 1, limit = 10) {
@@ -303,7 +298,7 @@ export class PropertiesService {
     ]);
 
     return {
-      data,
+      data: data.map((item) => this.formatPropertyMedia(item)),
       total,
       page,
       limit: normalizedLimit,
@@ -328,7 +323,7 @@ export class PropertiesService {
     await this.cacheService.delete(key);
     await this.incrementPropertyListCacheVersion();
 
-    return updatedProperty;
+    return this.formatPropertyMedia(updatedProperty);
   }
 
   async rejectReview(id: string) {
@@ -348,7 +343,7 @@ export class PropertiesService {
     await this.cacheService.delete(key);
     await this.incrementPropertyListCacheVersion();
 
-    return updatedProperty;
+    return this.formatPropertyMedia(updatedProperty);
   }
 
   private async getPropertyListCacheVersion(): Promise<number> {
@@ -420,5 +415,18 @@ export class PropertiesService {
       }, {});
 
     return PropertiesCacheKeys.queryList(version, JSON.stringify(sorted));
+  }
+
+  private formatPropertyMedia<T extends { media?: string[] }>(
+    property: T | null,
+  ): T | null {
+    if (!property || !Array.isArray(property.media)) {
+      return property;
+    }
+
+    return {
+      ...property,
+      media: property.media.map((key) => this.awsS3Service.getPublicUrl(key)),
+    } as T;
   }
 }

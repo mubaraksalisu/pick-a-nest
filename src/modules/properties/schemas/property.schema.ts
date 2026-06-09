@@ -140,11 +140,14 @@ export class Property extends Document {
         return (
           value &&
           value.length > 0 &&
-          value.every((url: string) => url.length > 4 && url.length <= 2048)
+          value.every(
+            (key: string) =>
+              typeof key === 'string' && key.length > 0 && key.length <= 2048,
+          )
         );
       },
       message:
-        'property should have at least one media url and the url should be valid',
+        'property should have at least one media key and the key should be valid',
     },
     required: true,
   })

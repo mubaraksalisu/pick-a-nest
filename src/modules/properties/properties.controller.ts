@@ -12,14 +12,8 @@ import {
   Req,
   DefaultValuePipe,
   ParseIntPipe,
-  UploadedFiles,
-  UseInterceptors,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
-  BadRequestException,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { AwsS3Service } from 'src/infrastructure/aws-s3/aws-s3.service';
 import { PropertiesService } from './properties.service';
 import {
   CreatePropertyDto,
@@ -34,7 +28,6 @@ import { RolesGuard } from 'src/shared/auth/guards/roles.guard';
 import {
   ApiBearerAuth,
   ApiBody,
-  ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -48,17 +41,36 @@ import { PropertyQueryDto } from './dto/property-query.dto';
 import { GetPropertiesResponseDto } from './dto/get-property-response.dto';
 import { AuthenticatedRequest } from '../auth/dto/auth.dto';
 import { SetFeaturedPropertyDto } from './dto/set-featured-property.dto';
-import { memoryStorage } from 'multer';
-import { SwaggerUploadDto } from './dto/swagger-upload.dto';
+import { CreatePresignedUploadUrlDto } from './dto/create-presigned-upload-url.dto';
 
 @ApiTags('properties')
 @Controller('properties')
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(
+    private readonly propertiesService: PropertiesService,
+    private readonly awsS3Service: AwsS3Service,
+  ) {}
 
   @Roles(UserRole.AGENT)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @UseInterceptors(FilesInterceptor('media', 10, { storage: memoryStorage() }))
+  @Post('upload-url')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a presigned upload URL for property media' })
+  @ApiBody({ type: CreatePresignedUploadUrlDto })
+  @ApiOkResponse({
+    description: 'Presigned upload URL and resulting public image URL',
+  })
+  createUploadUrl(
+    @Body(ValidationPipe) uploadUrlDto: CreatePresignedUploadUrlDto,
+  ) {
+    return this.awsS3Service.createPresignedUploadUrl(
+      uploadUrlDto.fileName,
+      uploadUrlDto.fileType,
+    );
+  }
+
+  @Roles(UserRole.AGENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new property listing (agents only)' })
@@ -73,33 +85,15 @@ export class PropertiesController {
   @ApiNotFoundResponse({
     description: 'No category found with the provided categoryId',
   })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Data for creating a new property listing',
-    type: SwaggerUploadDto,
-  })
   create(
     @Body(ValidationPipe) createPropertyDto: CreatePropertyDto,
-    @UploadedFiles(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
-          new FileTypeValidator({ fileType: 'image/(jpeg|png|webp)' }),
-        ],
-        exceptionFactory: () =>
-          new BadRequestException(
-            'Images must be JPG, JPEG, PNG, or WEBP and no larger than 5MB.',
-          ),
-      }),
-    )
-    files: Array<Express.Multer.File>,
     @Req() req: AuthenticatedRequest,
   ) {
     const propertyDto = {
       ...createPropertyDto,
       ownerId: req.user._id,
     };
-    return this.propertiesService.create(propertyDto, files);
+    return this.propertiesService.create(propertyDto);
   }
 
   @Get()

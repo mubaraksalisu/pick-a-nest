@@ -1,5 +1,8 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsEnum,
   IsMongoId,
   IsNotEmpty,
@@ -110,6 +113,18 @@ export class CreatePropertyDto {
   @MaxLength(20)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   propertySize: string;
+
+  @ApiProperty({
+    type: [String],
+    description: 'S3 object keys for property images',
+    example: ['properties/1234abcd-photo.jpg'],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  @MaxLength(2048, { each: true })
+  @IsNotEmpty({ each: true })
+  media: string[];
 }
 
 export class PropertyResponseDto {
