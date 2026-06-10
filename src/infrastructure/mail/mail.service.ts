@@ -36,7 +36,7 @@ export class MailService {
   }
 
   async sendVerificationEmail(email: string, token: string) {
-    const verificationLink = `${this.configService.get<string>('FRONTEND_URL')}/auth/verify-email?token=${token}`;
+    const verificationLink = `${this.configService.getOrThrow<string>('FRONTEND_URL')}/auth/verify-email?token=${token}`;
     const html = verificationEmailTemplate(verificationLink);
 
     await this.sendEmail(email, 'Verify Your Email', html);

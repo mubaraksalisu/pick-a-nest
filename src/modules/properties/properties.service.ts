@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -28,7 +29,7 @@ export class PropertiesService {
   async create(createPropertyDto: CreatePropertyDto, currentUserId?: string) {
     const ownerId = currentUserId || createPropertyDto.ownerId;
     if (!ownerId) {
-      throw new Error('Property ownerId is required');
+      throw new BadRequestException('Property ownerId is required');
     }
 
     const ownerIdString = ownerId;

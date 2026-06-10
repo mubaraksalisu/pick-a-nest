@@ -12,8 +12,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       isGlobal: true,
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const redisUrl =
-          configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
+        const redisUrl = `redis://${configService.get<string>('REDIS_HOST', 'localhost')}:${configService.get<number>('REDIS_PORT', 6379)}`;
 
         return {
           stores: [createKeyv(redisUrl)],

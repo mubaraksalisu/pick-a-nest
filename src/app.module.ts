@@ -13,7 +13,7 @@ import { HomeModule } from './modules/home/home.module';
 import { HealthModule } from './modules/health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { HttpExceptionFilter } from './shared/filters/httpException.filter';
@@ -88,7 +88,7 @@ import { AwsS3Module } from './infrastructure/aws-s3/aws-s3.module';
       useClass: ThrottlerGuard,
     },
     {
-      provide: 'APP_FILTER',
+      provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
   ],
