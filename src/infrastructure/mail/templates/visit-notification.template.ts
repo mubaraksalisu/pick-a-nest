@@ -67,6 +67,46 @@ export const visitRescheduledTemplate = ({
   </div>
 `;
 
+export const visitConfirmedTemplate = ({
+  recipientName,
+  propertyTitle,
+  propertyAddress,
+  startDate,
+  endDate,
+  note,
+}: VisitNotificationTemplateProps) => `
+  <div style="font-family: Arial, sans-serif; color: #333;">
+    <h2>Visit Confirmed</h2>
+    <p>Hi ${recipientName},</p>
+    <p>Your visit has been confirmed for the property below:</p>
+    <p><strong>${propertyTitle}</strong><br>${propertyAddress}</p>
+    <p><strong>Start:</strong> ${startDate}<br>
+    <strong>End:</strong> ${endDate}</p>
+    ${note ? `<p><strong>Note:</strong> ${note}</p>` : ``}
+    <p>We look forward to seeing you soon.</p>
+  </div>
+`;
+
+export const visitReminderTemplate = ({
+  recipientName,
+  propertyTitle,
+  propertyAddress,
+  startDate,
+  endDate,
+  note,
+}: VisitNotificationTemplateProps) => `
+  <div style="font-family: Arial, sans-serif; color: #333;">
+    <h2>Visit Reminder</h2>
+    <p>Hi ${recipientName},</p>
+    <p>This is a reminder for your upcoming visit:</p>
+    <p><strong>${propertyTitle}</strong><br>${propertyAddress}</p>
+    <p><strong>Start:</strong> ${startDate}<br>
+    <strong>End:</strong> ${endDate}</p>
+    ${note ? `<p><strong>Note:</strong> ${note}</p>` : ``}
+    <p>See you soon.</p>
+  </div>
+`;
+
 export const visitCanceledTemplate = ({
   recipientName,
   propertyTitle,

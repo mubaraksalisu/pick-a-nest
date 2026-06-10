@@ -19,6 +19,10 @@ export class EmailProcessor extends WorkerHost {
         await this.sendVisitRequestedEmail(job.data);
         break;
 
+      case EMAIL_JOBS.VISIT_CONFIRMED:
+        await this.sendVisitConfirmedEmail(job.data);
+        break;
+
       case EMAIL_JOBS.VISIT_SCHEDULED:
         await this.sendVisitScheduledEmail(job.data);
         break;
@@ -29,6 +33,10 @@ export class EmailProcessor extends WorkerHost {
 
       case EMAIL_JOBS.VISIT_CANCELED:
         await this.sendVisitCanceledEmail(job.data);
+        break;
+
+      case EMAIL_JOBS.VISIT_REMINDER:
+        await this.sendVisitReminderEmail(job.data);
         break;
 
       default:
@@ -78,6 +86,30 @@ export class EmailProcessor extends WorkerHost {
 
   private async sendVisitCanceledEmail(data: any) {
     await this.mailService.sendVisitCanceledEmail(
+      data.email,
+      data.recipientName,
+      data.propertyTitle,
+      data.propertyAddress,
+      data.startDate,
+      data.endDate,
+      data.note,
+    );
+  }
+
+  private async sendVisitConfirmedEmail(data: any) {
+    await this.mailService.sendVisitConfirmedEmail(
+      data.email,
+      data.recipientName,
+      data.propertyTitle,
+      data.propertyAddress,
+      data.startDate,
+      data.endDate,
+      data.note,
+    );
+  }
+
+  private async sendVisitReminderEmail(data: any) {
+    await this.mailService.sendVisitReminderEmail(
       data.email,
       data.recipientName,
       data.propertyTitle,

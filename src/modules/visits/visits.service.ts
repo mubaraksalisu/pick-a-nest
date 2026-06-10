@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ChangeStatusDto,
@@ -10,22 +11,25 @@ import {
   VisitStatus,
 } from './dto/create-visit.dto';
 import { UpdateVisitDto } from './dto/update-visit.dto';
+import { CancelVisitDto } from './dto/cancel-visit.dto';
+import { FeedbackVisitDto } from './dto/feedback-visit.dto';
+import { VisitQueryDto } from './dto/visit-query.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Visit } from './schemas/visit.schema';
-import { Model } from 'mongoose';
-import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
+import { FilterQuery, Model, Types } from 'mongoose';
 import * as luxon from 'luxon';
 import { PropertiesService } from 'src/modules/properties/properties.service';
 import { UsersService } from 'src/modules/users/users.service';
 import { QueuesService } from 'src/infrastructure/queues/queues.service';
 import { EMAIL_JOBS } from 'src/infrastructure/queues/queue.constants';
+import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
 
 @Injectable()
 export class VisitsService {
   constructor(
     @InjectModel(Visit.name) private visitModel: Model<Visit>,
     private propertiesService: PropertiesService,
-    private userModel: UsersService,
+    private usersService: UsersService,
     private readonly queuesService: QueuesService,
   ) {}
 
@@ -33,125 +37,135 @@ export class VisitsService {
     const {
       propertyId,
       agentId,
-      clientId,
-      startIso,
-      endIso,
+      customerId,
+      visitDate,
+      startTime,
+      endTime,
       idempotencyKey,
       note,
-      status,
     } = createVisitDto;
+
+    this.assertValidObjectIds([propertyId, agentId, customerId]);
 
     if (idempotencyKey) {
       const existing = await this.visitModel.findOne({ idempotencyKey });
       if (existing) return existing;
     }
 
-    await this.confirmIdsIndatabase(propertyId, agentId, clientId);
+    await this.confirmIdsInDatabase(propertyId, agentId, customerId);
 
-    const start = luxon.DateTime.fromISO(startIso).toUTC();
-    const end = luxon.DateTime.fromISO(endIso).toUTC();
+    const { startUtc, endUtc, visitDateValue, start, end } =
+      this.parseVisitWindow(visitDate, startTime, endTime);
     this.assertValidWindow(start, end);
 
-    // Check overlap for the property, agent, and client separately
-    const propertyOverlap = await this.visitModel.findOne({
+    await this.assertNoSchedulingConflicts({
       propertyId,
-      status: { $ne: VisitStatus.CANCELED },
-      deletedAt: null,
-      startUtc: { $lt: end.toJSDate() },
-      endUtc: { $gt: start.toJSDate() },
-    });
-    if (propertyOverlap)
-      throw new ConflictException(
-        'Time slot overlaps with existing visit for this property',
-      );
-
-    const agentOverlap = await this.visitModel.findOne({
       agentId,
-      status: { $ne: VisitStatus.CANCELED },
-      deletedAt: null,
-      startUtc: { $lt: end.toJSDate() },
-      endUtc: { $gt: start.toJSDate() },
+      customerId,
+      startUtc,
+      endUtc,
     });
-    if (agentOverlap)
-      throw new ConflictException('Agent has a conflicting visit at this time');
-
-    const clientOverlap = await this.visitModel.findOne({
-      clientId,
-      status: { $ne: VisitStatus.CANCELED },
-      deletedAt: null,
-      startUtc: { $lt: end.toJSDate() },
-      endUtc: { $gt: start.toJSDate() },
-    });
-    if (clientOverlap)
-      throw new ConflictException(
-        'Client has a conflicting visit at this time',
-      );
 
     const visit = new this.visitModel({
       agentId,
-      clientId,
+      customerId,
       propertyId,
-      idempotencyKey,
+      visitDate: visitDateValue,
+      startTime,
+      endTime,
+      startUtc,
+      endUtc,
       notes: note,
-      status: status || VisitStatus.REQUESTING,
-      startUtc: start.toJSDate(),
-      endUtc: end.toJSDate(),
+      status: VisitStatus.PENDING,
+      idempotencyKey,
     });
 
     const savedVisit = await visit.save();
     await this.emitVisitNotificationForCreate(
       savedVisit,
       agentId,
-      clientId,
+      customerId,
       propertyId,
       note,
-      status || VisitStatus.REQUESTING,
+      VisitStatus.PENDING,
     );
 
     return savedVisit;
   }
 
-  async changeStatus(
-    id: string,
-    changeStatusDto: ChangeStatusDto,
-  ): Promise<Visit> {
-    const visit = await this.visitModel.findById(id);
-    if (!visit) throw new NotFoundException('No visit with the provided id');
-
-    const allowed = {
-      [VisitStatus.REQUESTING]: [VisitStatus.CANCELED, VisitStatus.SCHEDULED],
-      [VisitStatus.SCHEDULED]: [VisitStatus.CANCELED, VisitStatus.COMPLETED],
-      [VisitStatus.CANCELED]: [],
-      [VisitStatus.COMPLETED]: [],
-    };
-
-    if (!allowed[visit.status].includes(changeStatusDto.status)) {
+  async confirm(id: string): Promise<Visit> {
+    const visit = await this.findOne(id);
+    if (
+      ![VisitStatus.PENDING, VisitStatus.RESCHEDULED].includes(
+        visit.status as VisitStatus,
+      )
+    ) {
       throw new BadRequestException(
-        `Invalid transition from ${visit.status} to ${changeStatusDto.status}`,
+        'Only pending or rescheduled visits can be confirmed',
       );
     }
 
-    visit.status = changeStatusDto.status;
+    visit.status = VisitStatus.CONFIRMED;
+    visit.confirmedAt = new Date();
+
     const savedVisit = await visit.save();
+    await this.emitVisitNotificationForStatus(
+      savedVisit,
+      EMAIL_JOBS.VISIT_CONFIRMED,
+    );
+    await this.scheduleVisitReminder(savedVisit);
 
-    if (savedVisit.status === VisitStatus.SCHEDULED) {
-      await this.emitVisitNotificationForStatus(
-        savedVisit,
-        EMAIL_JOBS.VISIT_SCHEDULED,
+    return savedVisit;
+  }
+
+  async complete(id: string): Promise<Visit> {
+    const visit = await this.findOne(id);
+    if (
+      ![VisitStatus.CONFIRMED, VisitStatus.RESCHEDULED].includes(
+        visit.status as VisitStatus,
+      )
+    ) {
+      throw new BadRequestException(
+        'Only confirmed or rescheduled visits can be completed',
       );
     }
 
-    if (savedVisit.status === VisitStatus.CANCELED) {
-      await this.emitVisitNotificationForStatus(
-        savedVisit,
-        EMAIL_JOBS.VISIT_CANCELED,
+    visit.status = VisitStatus.COMPLETED;
+    visit.completedAt = new Date();
+
+    return await visit.save();
+  }
+
+  async cancel(id: string, cancelVisitDto: CancelVisitDto): Promise<Visit> {
+    const visit = await this.findOne(id);
+    if (
+      [
+        VisitStatus.CANCELLED,
+        VisitStatus.COMPLETED,
+        VisitStatus.NO_SHOW,
+      ].includes(visit.status as VisitStatus)
+    ) {
+      throw new BadRequestException(
+        'Visit cannot be cancelled in current state',
       );
     }
+
+    visit.status = VisitStatus.CANCELLED;
+    visit.cancellationReason = cancelVisitDto.reason;
+    visit.cancelledAt = new Date();
+
+    const savedVisit = await visit.save();
+    await this.emitVisitNotificationForStatus(
+      savedVisit,
+      EMAIL_JOBS.VISIT_CANCELED,
+    );
 
     return savedVisit;
   }
 
   async findOne(id: string): Promise<Visit> {
+    this.assertValidObjectIds([id]);
+
     const visit = await this.visitModel.findById(id);
     if (!visit || visit.deletedAt)
       throw new NotFoundException('No visit with the provided id');
@@ -160,65 +174,45 @@ export class VisitsService {
   }
 
   async reschedule(id: string, updateVisitDto: UpdateVisitDto): Promise<Visit> {
-    const visit = await this.visitModel.findById(id);
-    if (!visit) throw new NotFoundException('No visit with the provided id');
+    const visit = await this.findOne(id);
 
     if (
-      ![
-        VisitStatus.REQUESTING.toString(),
-        VisitStatus.SCHEDULED.toString(),
-      ].includes(visit.status)
+      [
+        VisitStatus.COMPLETED,
+        VisitStatus.CANCELLED,
+        VisitStatus.NO_SHOW,
+      ].includes(visit.status as VisitStatus)
     ) {
       throw new BadRequestException(
-        'Only requesting/scheduled visits can be rescheduled',
+        'Only pending, confirmed, or rescheduled visits can be rescheduled',
       );
     }
 
-    const start = luxon.DateTime.fromISO(updateVisitDto.startIso).toUTC();
-    const end = luxon.DateTime.fromISO(updateVisitDto.endIso).toUTC();
+    const { startUtc, endUtc, visitDateValue, start, end } =
+      this.parseVisitWindow(
+        updateVisitDto.visitDate,
+        updateVisitDto.startTime,
+        updateVisitDto.endTime,
+      );
     this.assertValidWindow(start, end);
 
-    // Check property overlap excluding current visit
-    const propertyOverlap = await this.visitModel.findOne({
-      propertyId: visit.propertyId,
-      deletedAt: null,
-      _id: { $ne: id },
-      startUtc: { $lt: end.toJSDate() },
-      endUtc: { $gt: start.toJSDate() },
+    await this.assertNoSchedulingConflicts({
+      propertyId: visit.propertyId.toString(),
+      agentId: visit.agentId.toString(),
+      customerId: visit.customerId.toString(),
+      startUtc,
+      endUtc,
+      excludeId: id,
     });
-    if (propertyOverlap)
-      throw new ConflictException(
-        'Time slot overlaps with existing visit for this property',
-      );
 
-    // Check agent overlap excluding current visit
-    const agentOverlap = await this.visitModel.findOne({
-      agentId: visit.agentId,
-      deletedAt: null,
-      _id: { $ne: id },
-      startUtc: { $lt: end.toJSDate() },
-      endUtc: { $gt: start.toJSDate() },
-    });
-    if (agentOverlap)
-      throw new ConflictException('Agent has a conflicting visit at this time');
-
-    // Check client overlap excluding current visit
-    const clientOverlap = await this.visitModel.findOne({
-      clientId: visit.clientId,
-      deletedAt: null,
-      _id: { $ne: id },
-      startUtc: { $lt: end.toJSDate() },
-      endUtc: { $gt: start.toJSDate() },
-    });
-    if (clientOverlap)
-      throw new ConflictException(
-        'Client has a conflicting visit at this time',
-      );
-
-    visit.startUtc = start.toJSDate();
-    visit.endUtc = end.toJSDate();
+    visit.visitDate = visitDateValue;
+    visit.startTime = updateVisitDto.startTime;
+    visit.endTime = updateVisitDto.endTime;
+    visit.startUtc = startUtc;
+    visit.endUtc = endUtc;
     if (updateVisitDto.note !== undefined) visit.notes = updateVisitDto.note;
-    visit.status = VisitStatus.REQUESTING;
+    visit.status = VisitStatus.RESCHEDULED;
+    visit.rescheduledAt = new Date();
 
     const savedVisit = await visit.save();
     await this.emitVisitNotificationForStatus(
@@ -231,46 +225,375 @@ export class VisitsService {
 
   async propertyVisitList(
     propertyId: string,
-    fromIso?: string,
-    toIso?: string,
+    fromDate?: string,
+    toDate?: string,
   ) {
-    isValidObjectId(propertyId);
+    this.assertValidObjectIds([propertyId]);
 
     const query: any = { propertyId, deletedAt: null };
 
-    if (fromIso && toIso) {
-      query.startUtc = {
-        $lt: luxon.DateTime.fromISO(toIso).toUTC().toJSDate(),
-      };
+    if (fromDate) {
       query.endUtc = {
-        $gt: luxon.DateTime.fromISO(fromIso).toUTC().toJSDate(),
+        ...query.endUtc,
+        $gt: luxon.DateTime.fromISO(fromDate).toUTC().toJSDate(),
+      };
+    }
+
+    if (toDate) {
+      query.startUtc = {
+        ...query.startUtc,
+        $lt: luxon.DateTime.fromISO(toDate).toUTC().toJSDate(),
       };
     }
 
     return await this.visitModel.find(query).sort('startUtc');
   }
 
-  async cancel(id: string): Promise<Visit> {
-    return this.changeStatus(id, { status: VisitStatus.CANCELED });
+  async findMyVisits(userId: string, query: VisitQueryDto) {
+    return this.findByParticipant({ customerId: userId }, query);
   }
 
-  async softDelete(id: string): Promise<Visit> {
-    const visit = await this.visitModel.findById(id);
-    if (!visit) throw new NotFoundException('No visit with the provided id');
+  async findAgentVisits(agentId: string, query: VisitQueryDto) {
+    return this.findByParticipant({ agentId }, query);
+  }
+
+  async findUpcoming(userId: string, days = 7) {
+    const start = luxon.DateTime.utc().toJSDate();
+    const end = luxon.DateTime.utc().plus({ days }).toJSDate();
+
+    return this.visitModel
+      .find({
+        deletedAt: null,
+        startUtc: { $gte: start, $lte: end },
+        $or: [{ customerId: userId }, { agentId: userId }],
+        status: {
+          $in: [
+            VisitStatus.PENDING,
+            VisitStatus.CONFIRMED,
+            VisitStatus.RESCHEDULED,
+          ],
+        },
+      })
+      .sort('startUtc');
+  }
+
+  async findHistory(userId: string, query: VisitQueryDto) {
+    const historyStatuses = [
+      VisitStatus.COMPLETED,
+      VisitStatus.CANCELLED,
+      VisitStatus.NO_SHOW,
+    ];
+
+    const filters: any = {
+      deletedAt: null,
+      status: { $in: historyStatuses },
+      $or: [{ customerId: userId }, { agentId: userId }],
+    };
+
+    return this.findPaginated(filters, query);
+  }
+
+  async findAllForAdmin(query: VisitQueryDto) {
+    const filters: any = { deletedAt: null };
+
+    if (query.status) filters.status = query.status;
+    if (query.agentId) filters.agentId = query.agentId;
+    if (query.propertyId) filters.propertyId = query.propertyId;
+    if (query.customerId) filters.customerId = query.customerId;
+    if (query.fromDate) {
+      filters.endUtc = {
+        ...filters.endUtc,
+        $gt: luxon.DateTime.fromISO(query.fromDate).toUTC().toJSDate(),
+      };
+    }
+    if (query.toDate) {
+      filters.startUtc = {
+        ...filters.startUtc,
+        $lt: luxon.DateTime.fromISO(query.toDate).toUTC().toJSDate(),
+      };
+    }
+
+    return this.findPaginated(filters, query);
+  }
+
+  async getStats() {
+    const base = { deletedAt: null };
+    const [
+      pending,
+      confirmed,
+      rescheduled,
+      completed,
+      cancelled,
+      noShow,
+      total,
+    ] = await Promise.all([
+      this.visitModel.countDocuments({ ...base, status: VisitStatus.PENDING }),
+      this.visitModel.countDocuments({
+        ...base,
+        status: VisitStatus.CONFIRMED,
+      }),
+      this.visitModel.countDocuments({
+        ...base,
+        status: VisitStatus.RESCHEDULED,
+      }),
+      this.visitModel.countDocuments({
+        ...base,
+        status: VisitStatus.COMPLETED,
+      }),
+      this.visitModel.countDocuments({
+        ...base,
+        status: VisitStatus.CANCELLED,
+      }),
+      this.visitModel.countDocuments({ ...base, status: VisitStatus.NO_SHOW }),
+      this.visitModel.countDocuments(base),
+    ]);
+
+    return {
+      total,
+      pending,
+      confirmed,
+      rescheduled,
+      completed,
+      cancelled,
+      noShow,
+    };
+  }
+
+  async addFeedback(
+    id: string,
+    feedbackVisitDto: FeedbackVisitDto,
+    userId: string,
+  ) {
+    const visit = await this.findOne(id);
+    if (visit.customerId.toString() !== userId) {
+      throw new ForbiddenException(
+        'Only the booking customer can submit feedback',
+      );
+    }
+
+    if (visit.status !== VisitStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Feedback can only be submitted for completed visits',
+      );
+    }
+
+    visit.feedback = {
+      rating: feedbackVisitDto.rating,
+      comment: feedbackVisitDto.comment,
+    };
+
+    return visit.save();
+  }
+
+  async softDeleteVisit(id: string): Promise<Visit> {
+    const visit = await this.findOne(id);
 
     visit.deletedAt = new Date();
     return await visit.save();
   }
 
-  private async confirmIdsIndatabase(
+  async changeStatus(
+    id: string,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<Visit> {
+    const visit = await this.findOne(id);
+
+    const allowed: Record<string, VisitStatus[]> = {
+      [VisitStatus.PENDING]: [VisitStatus.CONFIRMED, VisitStatus.CANCELLED],
+      [VisitStatus.CONFIRMED]: [
+        VisitStatus.CANCELLED,
+        VisitStatus.COMPLETED,
+        VisitStatus.RESCHEDULED,
+      ],
+      [VisitStatus.RESCHEDULED]: [VisitStatus.CONFIRMED, VisitStatus.CANCELLED],
+      [VisitStatus.CANCELLED]: [],
+      [VisitStatus.COMPLETED]: [],
+      [VisitStatus.NO_SHOW]: [],
+    };
+
+    if (
+      !allowed[visit.status as VisitStatus].includes(changeStatusDto.status)
+    ) {
+      throw new BadRequestException(
+        `Invalid transition from ${visit.status} to ${changeStatusDto.status}`,
+      );
+    }
+
+    visit.status = changeStatusDto.status;
+    if (visit.status === VisitStatus.CONFIRMED) {
+      visit.confirmedAt = new Date();
+      await this.scheduleVisitReminder(visit);
+    }
+    if (visit.status === VisitStatus.COMPLETED) visit.completedAt = new Date();
+    if (visit.status === VisitStatus.CANCELLED) visit.cancelledAt = new Date();
+    if (visit.status === VisitStatus.RESCHEDULED)
+      visit.rescheduledAt = new Date();
+
+    const savedVisit = await visit.save();
+    const notificationJob =
+      savedVisit.status === VisitStatus.CONFIRMED
+        ? EMAIL_JOBS.VISIT_CONFIRMED
+        : savedVisit.status === VisitStatus.RESCHEDULED
+          ? EMAIL_JOBS.VISIT_RESCHEDULED
+          : savedVisit.status === VisitStatus.CANCELLED
+            ? EMAIL_JOBS.VISIT_CANCELED
+            : EMAIL_JOBS.VISIT_SCHEDULED;
+
+    await this.emitVisitNotificationForStatus(savedVisit, notificationJob);
+
+    return savedVisit;
+  }
+
+  private async findByParticipant(
+    participantFilter: FilterQuery<Visit>,
+    query: VisitQueryDto,
+  ) {
+    const filters: any = { deletedAt: null, ...participantFilter };
+    if (query.status) filters.status = query.status;
+    if (query.fromDate) {
+      filters.endUtc = {
+        ...filters.endUtc,
+        $gt: luxon.DateTime.fromISO(query.fromDate).toUTC().toJSDate(),
+      };
+    }
+    if (query.toDate) {
+      filters.startUtc = {
+        ...filters.startUtc,
+        $lt: luxon.DateTime.fromISO(query.toDate).toUTC().toJSDate(),
+      };
+    }
+
+    return this.findPaginated(filters, query);
+  }
+
+  private async findPaginated(
+    filters: FilterQuery<Visit>,
+    query: VisitQueryDto,
+  ) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.visitModel
+        .find(filters)
+        .sort({ startUtc: 1 })
+        .skip(skip)
+        .limit(limit),
+      this.visitModel.countDocuments(filters),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    };
+  }
+
+  private assertValidObjectIds(ids: string[]) {
+    const invalid = ids.filter((id) => !isValidObjectId(id));
+    if (invalid.length) {
+      throw new BadRequestException('Invalid object id provided');
+    }
+  }
+
+  private parseVisitWindow(
+    visitDate: string,
+    startTime: string,
+    endTime: string,
+  ) {
+    const start = luxon.DateTime.fromFormat(
+      `${visitDate} ${startTime}`,
+      'yyyy-MM-dd HH:mm',
+      { zone: 'utc' },
+    );
+    const end = luxon.DateTime.fromFormat(
+      `${visitDate} ${endTime}`,
+      'yyyy-MM-dd HH:mm',
+      { zone: 'utc' },
+    );
+
+    if (!start.isValid || !end.isValid) {
+      throw new BadRequestException('Invalid visit date or time');
+    }
+
+    return {
+      visitDateValue: luxon.DateTime.fromISO(visitDate, { zone: 'utc' })
+        .startOf('day')
+        .toJSDate(),
+      start,
+      end,
+      startUtc: start.toUTC().toJSDate(),
+      endUtc: end.toUTC().toJSDate(),
+    };
+  }
+
+  private async assertNoSchedulingConflicts({
+    propertyId,
+    agentId,
+    customerId,
+    startUtc,
+    endUtc,
+    excludeId,
+  }: {
+    propertyId: string;
+    agentId: string;
+    customerId: string;
+    startUtc: Date;
+    endUtc: Date;
+    excludeId?: string;
+  }) {
+    const common = {
+      deletedAt: null,
+      status: { $ne: VisitStatus.CANCELLED },
+      startUtc: { $lt: endUtc },
+      endUtc: { $gt: startUtc },
+    };
+
+    const excludeFilter = excludeId ? { _id: { $ne: excludeId } } : {};
+
+    const propertyOverlap = await this.visitModel.findOne({
+      propertyId,
+      ...common,
+      ...excludeFilter,
+    });
+    if (propertyOverlap) {
+      throw new ConflictException(
+        'Time slot overlaps with existing visit for this property',
+      );
+    }
+
+    const agentOverlap = await this.visitModel.findOne({
+      agentId,
+      ...common,
+      ...excludeFilter,
+    });
+    if (agentOverlap) {
+      throw new ConflictException('Agent has a conflicting visit at this time');
+    }
+
+    const customerOverlap = await this.visitModel.findOne({
+      customerId,
+      ...common,
+      ...excludeFilter,
+    });
+    if (customerOverlap) {
+      throw new ConflictException(
+        'Customer has a conflicting visit at this time',
+      );
+    }
+  }
+
+  private async confirmIdsInDatabase(
     propertyId: string,
     agentId: string,
-    clientId: string,
+    customerId: string,
   ) {
-    // These will throw if not found, so no need for manual checks
     await this.propertiesService.findOne(propertyId);
-    await this.userModel.findOne(agentId);
-    await this.userModel.findOne(clientId);
+    await this.usersService.findOne(agentId);
+    await this.usersService.findOne(customerId);
   }
 
   private getVisitDateString(date: Date) {
@@ -281,75 +604,100 @@ export class VisitsService {
     );
   }
 
+  private async scheduleVisitReminder(visit: Visit) {
+    const reminder = luxon.DateTime.fromJSDate(visit.startUtc).minus({
+      hours: 24,
+    });
+    const delayMs = reminder.diffNow('milliseconds').milliseconds;
+    const delay = Math.max(0, delayMs);
+
+    const [agent, customer, property] = await Promise.all([
+      this.usersService.findOne(visit.agentId.toString()),
+      this.usersService.findOne(visit.customerId.toString()),
+      this.propertiesService.findOne(visit.propertyId.toString(), false),
+    ]);
+
+    const startDate = this.getVisitDateString(visit.startUtc);
+    const endDate = this.getVisitDateString(visit.endUtc);
+
+    await Promise.all([
+      this.queuesService.queueEmail(
+        EMAIL_JOBS.VISIT_REMINDER,
+        {
+          email: agent.email,
+          recipientName: `${agent.firstName} ${agent.lastName}`,
+          propertyTitle: property.title,
+          propertyAddress: property.address,
+          startDate,
+          endDate,
+          note: visit.notes,
+        },
+        { delay },
+      ),
+      this.queuesService.queueEmail(
+        EMAIL_JOBS.VISIT_REMINDER,
+        {
+          email: customer.email,
+          recipientName: `${customer.firstName} ${customer.lastName}`,
+          propertyTitle: property.title,
+          propertyAddress: property.address,
+          startDate,
+          endDate,
+          note: visit.notes,
+        },
+        { delay },
+      ),
+    ]);
+  }
+
   private async emitVisitNotificationForCreate(
     visit: Visit,
     agentId: string,
-    clientId: string,
+    customerId: string,
     propertyId: string,
     note: string | undefined,
     status: VisitStatus,
   ) {
-    const [agent, client, property] = await Promise.all([
-      this.userModel.findOne(agentId),
-      this.userModel.findOne(clientId),
+    const [agent, customer, property] = await Promise.all([
+      this.usersService.findOne(agentId),
+      this.usersService.findOne(customerId),
       this.propertiesService.findOne(propertyId, false),
     ]);
 
     const startDate = this.getVisitDateString(visit.startUtc);
     const endDate = this.getVisitDateString(visit.endUtc);
 
-    const jobs: any = [];
-    if (status === VisitStatus.SCHEDULED) {
-      jobs.push(
-        this.queueVisitNotification(
-          EMAIL_JOBS.VISIT_SCHEDULED,
-          agent,
-          property,
-          visit,
-          note,
-          startDate,
-          endDate,
-        ),
-        this.queueVisitNotification(
-          EMAIL_JOBS.VISIT_SCHEDULED,
-          client,
-          property,
-          visit,
-          note,
-          startDate,
-          endDate,
-        ),
-      );
-    } else {
-      jobs.push(
-        this.queueVisitNotification(
-          EMAIL_JOBS.VISIT_REQUESTED,
-          agent,
-          property,
-          visit,
-          note,
-          startDate,
-          endDate,
-        ),
-        this.queueVisitNotification(
-          EMAIL_JOBS.VISIT_REQUESTED,
-          client,
-          property,
-          visit,
-          note,
-          startDate,
-          endDate,
-        ),
-      );
-    }
+    const jobName =
+      status === VisitStatus.CONFIRMED
+        ? EMAIL_JOBS.VISIT_CONFIRMED
+        : EMAIL_JOBS.VISIT_REQUESTED;
 
-    await Promise.all(jobs);
+    await Promise.all([
+      this.queueVisitNotification(
+        jobName,
+        agent,
+        property,
+        visit,
+        note,
+        startDate,
+        endDate,
+      ),
+      this.queueVisitNotification(
+        jobName,
+        customer,
+        property,
+        visit,
+        note,
+        startDate,
+        endDate,
+      ),
+    ]);
   }
 
   private async emitVisitNotificationForStatus(visit: Visit, jobName: string) {
-    const [agent, client, property] = await Promise.all([
-      this.userModel.findOne(visit.agentId.toString()),
-      this.userModel.findOne(visit.clientId.toString()),
+    const [agent, customer, property] = await Promise.all([
+      this.usersService.findOne(visit.agentId.toString()),
+      this.usersService.findOne(visit.customerId.toString()),
       this.propertiesService.findOne(visit.propertyId.toString(), false),
     ]);
 
@@ -357,7 +705,7 @@ export class VisitsService {
       this.queueVisitNotification(jobName, agent, property, visit, visit.notes),
       this.queueVisitNotification(
         jobName,
-        client,
+        customer,
         property,
         visit,
         visit.notes,
@@ -392,9 +740,10 @@ export class VisitsService {
     if (start < luxon.DateTime.utc())
       throw new BadRequestException('Start must be in the future');
 
-    const visitDuration = 2;
-
-    if (end.diff(start, 'hours').hours > visitDuration)
-      throw new BadRequestException('Visit duration must be <= 2 hours');
+    const maximumDurationHours = 4;
+    if (end.diff(start, 'hours').hours > maximumDurationHours)
+      throw new BadRequestException(
+        `Visit duration must be <= ${maximumDurationHours} hours`,
+      );
   }
 }

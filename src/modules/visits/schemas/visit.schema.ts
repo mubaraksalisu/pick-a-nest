@@ -15,7 +15,7 @@ export class Visit extends Document {
     ref: 'User',
     required: true,
   })
-  clientId: Types.ObjectId;
+  customerId: Types.ObjectId;
 
   @Prop({
     type: Types.ObjectId,
@@ -23,6 +23,24 @@ export class Visit extends Document {
     required: true,
   })
   propertyId: Types.ObjectId;
+
+  @Prop({
+    type: Date,
+    required: true,
+  })
+  visitDate: Date;
+
+  @Prop({
+    type: String,
+    required: true,
+  })
+  startTime: string;
+
+  @Prop({
+    type: String,
+    required: true,
+  })
+  endTime: string;
 
   @Prop({
     type: Date,
@@ -44,10 +62,46 @@ export class Visit extends Document {
 
   @Prop({
     type: String,
-    enum: ['requesting', 'completed', 'canceled', 'scheduled'],
-    default: 'requesting',
+    maxlength: 256,
+  })
+  cancellationReason?: string;
+
+  @Prop({
+    type: {
+      rating: Number,
+      comment: String,
+    },
+  })
+  feedback?: {
+    rating: number;
+    comment?: string;
+  };
+
+  @Prop({
+    type: String,
+    enum: [
+      'pending',
+      'confirmed',
+      'rescheduled',
+      'completed',
+      'cancelled',
+      'no_show',
+    ],
+    default: 'pending',
   })
   status: string;
+
+  @Prop({ type: Date })
+  confirmedAt?: Date;
+
+  @Prop({ type: Date })
+  completedAt?: Date;
+
+  @Prop({ type: Date })
+  cancelledAt?: Date;
+
+  @Prop({ type: Date })
+  rescheduledAt?: Date;
 
   @Prop({ type: String, unique: true, sparse: true })
   idempotencyKey?: string;
@@ -57,8 +111,7 @@ export class Visit extends Document {
 }
 
 export const VisitSchema = SchemaFactory.createForClass(Visit);
-VisitSchema.index({ propertyId: 1, startUtc: 1 });
-VisitSchema.index({ clientId: 1, startUtc: 1 });
-// Compound indexes to support efficient overlap queries
 VisitSchema.index({ propertyId: 1, startUtc: 1, endUtc: 1 });
-VisitSchema.index({ agentId: 1, startUtc: 1 });
+VisitSchema.index({ agentId: 1, startUtc: 1, endUtc: 1 });
+VisitSchema.index({ customerId: 1, startUtc: 1, endUtc: 1 });
+VisitSchema.index({ status: 1 });

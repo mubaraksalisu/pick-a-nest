@@ -6,13 +6,16 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Matches,
 } from 'class-validator';
 
 export enum VisitStatus {
-  REQUESTING = 'requesting',
-  SCHEDULED = 'scheduled',
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
+  RESCHEDULED = 'rescheduled',
   COMPLETED = 'completed',
-  CANCELED = 'canceled',
+  CANCELLED = 'cancelled',
+  NO_SHOW = 'no_show',
 }
 
 export class CreateVisitDto {
@@ -22,7 +25,7 @@ export class CreateVisitDto {
 
   @IsMongoId()
   @IsNotEmpty()
-  clientId: string;
+  customerId: string;
 
   @IsMongoId()
   @IsNotEmpty()
@@ -30,25 +33,26 @@ export class CreateVisitDto {
 
   @IsDateString()
   @IsNotEmpty()
-  startIso: string;
+  visitDate: string;
 
-  @IsDateString()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
   @IsNotEmpty()
-  endIso: string;
+  startTime: string;
+
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
+  @IsNotEmpty()
+  endTime: string;
 
   @IsString()
   @IsOptional()
   @MaxLength(256)
-  note: string;
+  note?: string;
 
   @IsString()
   @IsOptional()
   idempotencyKey?: string;
-
-  @IsString()
-  @IsEnum(VisitStatus)
-  @IsOptional()
-  status: VisitStatus = VisitStatus.REQUESTING;
 }
 
 export class ChangeStatusDto {
@@ -58,16 +62,28 @@ export class ChangeStatusDto {
 }
 
 export class VisitResponseDto {
-  '_id': string;
-  'agentId': string;
-  'clientId': string;
-  'propertyId': string;
-  'startUtc': string;
-  'endUtc': string;
-  'status': string;
-  'idempotencyKey': string;
-  'createdAt': Date;
-  'updatedAt': Date;
-  '__v': number;
-  'notes': string;
+  _id: string;
+  agentId: string;
+  customerId: string;
+  propertyId: string;
+  visitDate: string;
+  startTime: string;
+  endTime: string;
+  startUtc: string;
+  endUtc: string;
+  status: string;
+  notes?: string;
+  cancellationReason?: string;
+  feedback?: {
+    rating: number;
+    comment?: string;
+  };
+  confirmedAt?: Date;
+  completedAt?: Date;
+  cancelledAt?: Date;
+  rescheduledAt?: Date;
+  idempotencyKey?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date;
 }

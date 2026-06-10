@@ -4,16 +4,23 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Matches,
 } from 'class-validator';
 
 export class UpdateVisitDto {
   @IsDateString()
   @IsNotEmpty()
-  startIso: string;
+  visitDate: string;
 
-  @IsDateString()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
   @IsNotEmpty()
-  endIso: string;
+  startTime: string;
+
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/)
+  @IsNotEmpty()
+  endTime: string;
 
   @IsString()
   @IsOptional()

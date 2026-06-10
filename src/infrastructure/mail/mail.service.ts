@@ -4,6 +4,8 @@ import { Resend } from 'resend';
 import { verificationEmailTemplate } from './templates/verification-email.template';
 import {
   visitCanceledTemplate,
+  visitConfirmedTemplate,
+  visitReminderTemplate,
   visitRequestedTemplate,
   visitRescheduledTemplate,
   visitScheduledTemplate,
@@ -90,6 +92,27 @@ export class MailService {
     await this.sendEmail(email, 'Visit Scheduled', html);
   }
 
+  async sendVisitConfirmedEmail(
+    email: string,
+    recipientName: string,
+    propertyTitle: string,
+    propertyAddress: string,
+    startDate: string,
+    endDate: string,
+    note?: string,
+  ) {
+    const html = visitConfirmedTemplate({
+      recipientName,
+      propertyTitle,
+      propertyAddress,
+      startDate,
+      endDate,
+      note,
+    });
+
+    await this.sendEmail(email, 'Visit Confirmed', html);
+  }
+
   async sendVisitRescheduledEmail(
     email: string,
     recipientName: string,
@@ -109,6 +132,27 @@ export class MailService {
     });
 
     await this.sendEmail(email, 'Visit Rescheduled', html);
+  }
+
+  async sendVisitReminderEmail(
+    email: string,
+    recipientName: string,
+    propertyTitle: string,
+    propertyAddress: string,
+    startDate: string,
+    endDate: string,
+    note?: string,
+  ) {
+    const html = visitReminderTemplate({
+      recipientName,
+      propertyTitle,
+      propertyAddress,
+      startDate,
+      endDate,
+      note,
+    });
+
+    await this.sendEmail(email, 'Visit Reminder', html);
   }
 
   async sendVisitCanceledEmail(

@@ -26,7 +26,7 @@ export class CanAccessVisitGuard implements CanActivate {
     const userId = (user._id || user.sub || user.id || '').toString();
 
     if (visit.agentId?.toString() === userId) return true;
-    if (visit.clientId?.toString() === userId) return true;
+    if (visit.customerId?.toString() === userId) return true;
 
     const property = await this.propertiesService.findOne(
       visit.propertyId.toString(),
