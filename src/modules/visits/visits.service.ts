@@ -17,6 +17,8 @@ import { isValidObjectId } from 'src/shared/utils/isValidObjectId.util';
 import * as luxon from 'luxon';
 import { PropertiesService } from 'src/modules/properties/properties.service';
 import { UsersService } from 'src/modules/users/users.service';
+import { QueuesService } from 'src/infrastructure/queues/queues.service';
+import { EMAIL_JOBS } from 'src/infrastructure/queues/queue.constants';
 
 @Injectable()
 export class VisitsService {
@@ -24,6 +26,7 @@ export class VisitsService {
     @InjectModel(Visit.name) private visitModel: Model<Visit>,
     private propertiesService: PropertiesService,
     private userModel: UsersService,
+    private readonly queuesService: QueuesService,
   ) {}
 
   async create(createVisitDto: CreateVisitDto): Promise<Visit> {
@@ -49,26 +52,63 @@ export class VisitsService {
     const end = luxon.DateTime.fromISO(endIso).toUTC();
     this.assertValidWindow(start, end);
 
-    const overlap = await this.visitModel.findOne({
+    // Check overlap for the property, agent, and client separately
+    const propertyOverlap = await this.visitModel.findOne({
+      propertyId,
       status: { $ne: VisitStatus.CANCELED },
       deletedAt: null,
       startUtc: { $lt: end.toJSDate() },
       endUtc: { $gt: start.toJSDate() },
     });
-    if (overlap)
-      throw new ConflictException('Time slot overlaps with existing visit');
+    if (propertyOverlap)
+      throw new ConflictException(
+        'Time slot overlaps with existing visit for this property',
+      );
+
+    const agentOverlap = await this.visitModel.findOne({
+      agentId,
+      status: { $ne: VisitStatus.CANCELED },
+      deletedAt: null,
+      startUtc: { $lt: end.toJSDate() },
+      endUtc: { $gt: start.toJSDate() },
+    });
+    if (agentOverlap)
+      throw new ConflictException('Agent has a conflicting visit at this time');
+
+    const clientOverlap = await this.visitModel.findOne({
+      clientId,
+      status: { $ne: VisitStatus.CANCELED },
+      deletedAt: null,
+      startUtc: { $lt: end.toJSDate() },
+      endUtc: { $gt: start.toJSDate() },
+    });
+    if (clientOverlap)
+      throw new ConflictException(
+        'Client has a conflicting visit at this time',
+      );
 
     const visit = new this.visitModel({
       agentId,
       clientId,
       propertyId,
       idempotencyKey,
-      note,
+      notes: note,
       status: status || VisitStatus.REQUESTING,
       startUtc: start.toJSDate(),
       endUtc: end.toJSDate(),
     });
-    return await visit.save();
+
+    const savedVisit = await visit.save();
+    await this.emitVisitNotificationForCreate(
+      savedVisit,
+      agentId,
+      clientId,
+      propertyId,
+      note,
+      status || VisitStatus.REQUESTING,
+    );
+
+    return savedVisit;
   }
 
   async changeStatus(
@@ -92,12 +132,29 @@ export class VisitsService {
     }
 
     visit.status = changeStatusDto.status;
-    return visit.save();
+    const savedVisit = await visit.save();
+
+    if (savedVisit.status === VisitStatus.SCHEDULED) {
+      await this.emitVisitNotificationForStatus(
+        savedVisit,
+        EMAIL_JOBS.VISIT_SCHEDULED,
+      );
+    }
+
+    if (savedVisit.status === VisitStatus.CANCELED) {
+      await this.emitVisitNotificationForStatus(
+        savedVisit,
+        EMAIL_JOBS.VISIT_CANCELED,
+      );
+    }
+
+    return savedVisit;
   }
 
   async findOne(id: string): Promise<Visit> {
     const visit = await this.visitModel.findById(id);
-    if (!visit) throw new NotFoundException('No visit with the provided id');
+    if (!visit || visit.deletedAt)
+      throw new NotFoundException('No visit with the provided id');
 
     return visit;
   }
@@ -121,22 +178,55 @@ export class VisitsService {
     const end = luxon.DateTime.fromISO(updateVisitDto.endIso).toUTC();
     this.assertValidWindow(start, end);
 
-    const overlap = await this.visitModel.findOne({
-      propertyId: visit._id,
+    // Check property overlap excluding current visit
+    const propertyOverlap = await this.visitModel.findOne({
+      propertyId: visit.propertyId,
       deletedAt: null,
       _id: { $ne: id },
       startUtc: { $lt: end.toJSDate() },
       endUtc: { $gt: start.toJSDate() },
     });
-    if (overlap)
-      throw new ConflictException('Time slot overlaps with existing visit');
+    if (propertyOverlap)
+      throw new ConflictException(
+        'Time slot overlaps with existing visit for this property',
+      );
+
+    // Check agent overlap excluding current visit
+    const agentOverlap = await this.visitModel.findOne({
+      agentId: visit.agentId,
+      deletedAt: null,
+      _id: { $ne: id },
+      startUtc: { $lt: end.toJSDate() },
+      endUtc: { $gt: start.toJSDate() },
+    });
+    if (agentOverlap)
+      throw new ConflictException('Agent has a conflicting visit at this time');
+
+    // Check client overlap excluding current visit
+    const clientOverlap = await this.visitModel.findOne({
+      clientId: visit.clientId,
+      deletedAt: null,
+      _id: { $ne: id },
+      startUtc: { $lt: end.toJSDate() },
+      endUtc: { $gt: start.toJSDate() },
+    });
+    if (clientOverlap)
+      throw new ConflictException(
+        'Client has a conflicting visit at this time',
+      );
 
     visit.startUtc = start.toJSDate();
     visit.endUtc = end.toJSDate();
     if (updateVisitDto.note !== undefined) visit.notes = updateVisitDto.note;
     visit.status = VisitStatus.REQUESTING;
 
-    return await visit.save();
+    const savedVisit = await visit.save();
+    await this.emitVisitNotificationForStatus(
+      savedVisit,
+      EMAIL_JOBS.VISIT_RESCHEDULED,
+    );
+
+    return savedVisit;
   }
 
   async propertyVisitList(
@@ -181,6 +271,118 @@ export class VisitsService {
     await this.propertiesService.findOne(propertyId);
     await this.userModel.findOne(agentId);
     await this.userModel.findOne(clientId);
+  }
+
+  private getVisitDateString(date: Date) {
+    return (
+      luxon.DateTime.fromJSDate(date)
+        .toUTC()
+        .toLocaleString(luxon.DateTime.DATETIME_MED) + ' UTC'
+    );
+  }
+
+  private async emitVisitNotificationForCreate(
+    visit: Visit,
+    agentId: string,
+    clientId: string,
+    propertyId: string,
+    note: string | undefined,
+    status: VisitStatus,
+  ) {
+    const [agent, client, property] = await Promise.all([
+      this.userModel.findOne(agentId),
+      this.userModel.findOne(clientId),
+      this.propertiesService.findOne(propertyId, false),
+    ]);
+
+    const startDate = this.getVisitDateString(visit.startUtc);
+    const endDate = this.getVisitDateString(visit.endUtc);
+
+    const jobs: any = [];
+    if (status === VisitStatus.SCHEDULED) {
+      jobs.push(
+        this.queueVisitNotification(
+          EMAIL_JOBS.VISIT_SCHEDULED,
+          agent,
+          property,
+          visit,
+          note,
+          startDate,
+          endDate,
+        ),
+        this.queueVisitNotification(
+          EMAIL_JOBS.VISIT_SCHEDULED,
+          client,
+          property,
+          visit,
+          note,
+          startDate,
+          endDate,
+        ),
+      );
+    } else {
+      jobs.push(
+        this.queueVisitNotification(
+          EMAIL_JOBS.VISIT_REQUESTED,
+          agent,
+          property,
+          visit,
+          note,
+          startDate,
+          endDate,
+        ),
+        this.queueVisitNotification(
+          EMAIL_JOBS.VISIT_REQUESTED,
+          client,
+          property,
+          visit,
+          note,
+          startDate,
+          endDate,
+        ),
+      );
+    }
+
+    await Promise.all(jobs);
+  }
+
+  private async emitVisitNotificationForStatus(visit: Visit, jobName: string) {
+    const [agent, client, property] = await Promise.all([
+      this.userModel.findOne(visit.agentId.toString()),
+      this.userModel.findOne(visit.clientId.toString()),
+      this.propertiesService.findOne(visit.propertyId.toString(), false),
+    ]);
+
+    await Promise.all([
+      this.queueVisitNotification(jobName, agent, property, visit, visit.notes),
+      this.queueVisitNotification(
+        jobName,
+        client,
+        property,
+        visit,
+        visit.notes,
+      ),
+    ]);
+  }
+
+  private async queueVisitNotification(
+    jobName: string,
+    user: any,
+    property: any,
+    visit: Visit,
+    note?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    return this.queuesService.queueEmail(jobName, {
+      email: user.email,
+      recipientName: `${user.firstName} ${user.lastName}`,
+      propertyTitle: property.title,
+      propertyAddress: property.address,
+      startDate: startDate ?? this.getVisitDateString(visit.startUtc),
+      endDate: endDate ?? this.getVisitDateString(visit.endUtc),
+      note,
+    });
   }
 
   private assertValidWindow(start: luxon.DateTime, end: luxon.DateTime) {

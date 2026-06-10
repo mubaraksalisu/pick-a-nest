@@ -17,7 +17,6 @@ export class QueuesService {
   }
 
   queueEmail(jobName: string, data: any) {
-    console.log(`Queued email job: ${jobName} with data:`, data);
     return this.addToQueue(this.emailQueue, jobName, data);
   }
 }

@@ -52,10 +52,9 @@ export class CreateVisitDto {
 }
 
 export class ChangeStatusDto {
-  @IsString()
+  @IsEnum(VisitStatus)
   @IsNotEmpty()
-  @MaxLength(50)
-  status: string;
+  status: VisitStatus;
 }
 
 export class VisitResponseDto {

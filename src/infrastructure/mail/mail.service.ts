@@ -2,6 +2,12 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 import { verificationEmailTemplate } from './templates/verification-email.template';
+import {
+  visitCanceledTemplate,
+  visitRequestedTemplate,
+  visitRescheduledTemplate,
+  visitScheduledTemplate,
+} from './templates/visit-notification.template';
 
 @Injectable()
 export class MailService {
@@ -40,5 +46,89 @@ export class MailService {
     const html = verificationEmailTemplate(verificationLink);
 
     await this.sendEmail(email, 'Verify Your Email', html);
+  }
+
+  async sendVisitRequestedEmail(
+    email: string,
+    recipientName: string,
+    propertyTitle: string,
+    propertyAddress: string,
+    startDate: string,
+    endDate: string,
+    note?: string,
+  ) {
+    const html = visitRequestedTemplate({
+      recipientName,
+      propertyTitle,
+      propertyAddress,
+      startDate,
+      endDate,
+      note,
+    });
+
+    await this.sendEmail(email, 'New Visit Request', html);
+  }
+
+  async sendVisitScheduledEmail(
+    email: string,
+    recipientName: string,
+    propertyTitle: string,
+    propertyAddress: string,
+    startDate: string,
+    endDate: string,
+    note?: string,
+  ) {
+    const html = visitScheduledTemplate({
+      recipientName,
+      propertyTitle,
+      propertyAddress,
+      startDate,
+      endDate,
+      note,
+    });
+
+    await this.sendEmail(email, 'Visit Scheduled', html);
+  }
+
+  async sendVisitRescheduledEmail(
+    email: string,
+    recipientName: string,
+    propertyTitle: string,
+    propertyAddress: string,
+    startDate: string,
+    endDate: string,
+    note?: string,
+  ) {
+    const html = visitRescheduledTemplate({
+      recipientName,
+      propertyTitle,
+      propertyAddress,
+      startDate,
+      endDate,
+      note,
+    });
+
+    await this.sendEmail(email, 'Visit Rescheduled', html);
+  }
+
+  async sendVisitCanceledEmail(
+    email: string,
+    recipientName: string,
+    propertyTitle: string,
+    propertyAddress: string,
+    startDate: string,
+    endDate: string,
+    note?: string,
+  ) {
+    const html = visitCanceledTemplate({
+      recipientName,
+      propertyTitle,
+      propertyAddress,
+      startDate,
+      endDate,
+      note,
+    });
+
+    await this.sendEmail(email, 'Visit Cancelled', html);
   }
 }

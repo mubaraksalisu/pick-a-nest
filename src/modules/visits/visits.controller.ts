@@ -19,6 +19,8 @@ import {
 import { UpdateVisitDto } from './dto/update-visit.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';
+import { CanAccessVisitGuard } from './guards/can-access-visit.guard';
+import { CanAccessPropertyGuard } from './guards/can-access-property.guard';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -56,6 +58,7 @@ export class VisitsController {
   }
 
   @UseGuards(ObjectIdGuard)
+  @UseGuards(CanAccessVisitGuard)
   @Patch(':id/change-status')
   @ApiOperation({ summary: 'Change status of an existing visit record' })
   @ApiParam({
@@ -79,6 +82,7 @@ export class VisitsController {
   }
 
   @UseGuards(ObjectIdGuard)
+  @UseGuards(CanAccessVisitGuard)
   @Get(':id')
   @ApiOperation({ summary: 'Get a visit record by id' })
   @ApiParam({
@@ -96,6 +100,7 @@ export class VisitsController {
   }
 
   @UseGuards(ObjectIdGuard)
+  @UseGuards(CanAccessVisitGuard)
   @Patch(':id/reschedule')
   @ApiOperation({
     summary: 'Reschedule a visit by updating the visit record dates and note',
@@ -149,6 +154,7 @@ export class VisitsController {
     description: 'Return list of visits associated to the specified propertyId',
     type: [VisitResponseDto],
   })
+  @UseGuards(CanAccessPropertyGuard)
   propertyVisitList(
     @Param('propertyId') propertyId: string,
     @Query('fromIso') fromIso?: string,
@@ -158,6 +164,7 @@ export class VisitsController {
   }
 
   @UseGuards(ObjectIdGuard)
+  @UseGuards(CanAccessVisitGuard)
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Update visit status to cancel' })
   @ApiParam({
@@ -176,6 +183,7 @@ export class VisitsController {
   }
 
   @UseGuards(ObjectIdGuard)
+  @UseGuards(CanAccessVisitGuard)
   @Delete(':id')
   @ApiOperation({ summary: 'Soft delete visit by id' })
   @ApiNotFoundResponse({

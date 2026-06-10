@@ -59,3 +59,6 @@ export class Visit extends Document {
 export const VisitSchema = SchemaFactory.createForClass(Visit);
 VisitSchema.index({ propertyId: 1, startUtc: 1 });
 VisitSchema.index({ clientId: 1, startUtc: 1 });
+// Compound indexes to support efficient overlap queries
+VisitSchema.index({ propertyId: 1, startUtc: 1, endUtc: 1 });
+VisitSchema.index({ agentId: 1, startUtc: 1 });
