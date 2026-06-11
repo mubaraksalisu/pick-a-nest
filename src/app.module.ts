@@ -13,7 +13,7 @@ import { HomeModule } from './modules/home/home.module';
 import { HealthModule } from './modules/health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { GlobalExceptionFilter } from './shared/filters/globalException.filter';
@@ -24,6 +24,7 @@ import { MailModule } from './infrastructure/mail/mail.module';
 import { EmailVerificationModule } from './modules/auth/email-verification/email-verification.module';
 import { QueuesModule } from './infrastructure/queues/queues.module';
 import { AwsS3Module } from './infrastructure/aws-s3/aws-s3.module';
+import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
 
 @Module({
   imports: [
@@ -48,9 +49,12 @@ import { AwsS3Module } from './infrastructure/aws-s3/aws-s3.module';
           format: winston.format.combine(
             winston.format.timestamp(),
             winston.format.colorize(),
-            winston.format.printf(({ level, message, timestamp, stack }) => {
-              return `[${timestamp}] ${level}: ${message} ${stack ? '\n' + stack : ''}`;
-            }),
+            winston.format.metadata(),
+            winston.format.printf(
+              ({ level, message, timestamp, stack, metadata }) => {
+                return `[${timestamp}] ${level}: ${message} ${JSON.stringify(metadata)} ${stack ? '\n' + stack : ''}`;
+              },
+            ),
           ),
         }),
         new winston.transports.File({
@@ -90,6 +94,10 @@ import { AwsS3Module } from './infrastructure/aws-s3/aws-s3.module';
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
     },
   ],
 })
