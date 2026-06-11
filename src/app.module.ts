@@ -16,7 +16,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
-import { HttpExceptionFilter } from './shared/filters/httpException.filter';
+import { GlobalExceptionFilter } from './shared/filters/globalException.filter';
 import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module';
 import { RefreshTokenModule } from './modules/auth/refresh-token/refresh-token.module';
 import { CacheModule } from './infrastructure/cache/cache.module';
@@ -61,7 +61,7 @@ import { AwsS3Module } from './infrastructure/aws-s3/aws-s3.module';
           format: winston.format.json(),
         }),
       ],
-      exitOnError: true, // prevent Winston from exiting after logging
+      exitOnError: false, // don't exit the process on logger errors
     }),
     CacheModule,
     FavoritesModule,
@@ -89,7 +89,7 @@ import { AwsS3Module } from './infrastructure/aws-s3/aws-s3.module';
     },
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: GlobalExceptionFilter,
     },
   ],
 })

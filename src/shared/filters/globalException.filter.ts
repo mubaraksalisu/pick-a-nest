@@ -11,7 +11,7 @@ import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 
 @Catch()
-export class HttpExceptionFilter implements ExceptionFilter {
+export class GlobalExceptionFilter implements ExceptionFilter {
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {}
@@ -37,9 +37,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
           (errorResponse as any).error ||
           'Internal server error';
 
-    this.logger.error({
+    this.logger.error(message, {
       status,
-      message,
       path: request.url,
       method: request.method,
       stack: exception instanceof Error ? exception.stack : null,
