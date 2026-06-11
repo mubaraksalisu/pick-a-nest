@@ -8,7 +8,6 @@ import { VisitsModule } from './modules/visits/visits.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PropertyReviewsModule } from './modules/property-reviews/property-reviews.module';
 import { HomeModule } from './modules/home/home.module';
 import { HealthModule } from './modules/health/health.module';
 import { TerminusModule } from '@nestjs/terminus';
@@ -17,7 +16,6 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
 import { GlobalExceptionFilter } from './shared/filters/globalException.filter';
-import { AgentReviewsModule } from './modules/agent-reviews/agent-reviews.module';
 import { RefreshTokenModule } from './modules/auth/refresh-token/refresh-token.module';
 import { CacheModule } from './infrastructure/cache/cache.module';
 import { MailModule } from './infrastructure/mail/mail.module';
@@ -75,11 +73,9 @@ import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
     PropertiesModule,
     AuthModule,
     VisitsModule,
-    PropertyReviewsModule,
     HomeModule,
     HealthModule,
     TerminusModule,
-    AgentReviewsModule,
     RefreshTokenModule,
     MailModule,
     EmailVerificationModule,
