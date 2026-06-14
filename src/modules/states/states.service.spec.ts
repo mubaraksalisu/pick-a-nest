@@ -78,6 +78,13 @@ describe('StatesService', () => {
       expect(result).toEqual({ _id: 's1', ...createStateDto });
       expect(cacheService.delete).toHaveBeenCalledWith('states:all');
     });
+
+    it('should propagate errors from the model create call', async () => {
+      model.findOne.mockResolvedValue(null);
+      model.create.mockRejectedValue(new Error('Database error'));
+
+      await expect(service.create(createStateDto)).rejects.toThrow('Database error');
+    });
   });
 
   describe('findAll', () => {
@@ -105,6 +112,15 @@ describe('StatesService', () => {
         result,
         60 * 60 * 1000,
       );
+    });
+
+    it('should propagate errors when database query fails', async () => {
+      cacheService.get.mockResolvedValue(null);
+      model.find.mockImplementation(() => {
+        throw new Error('DB query error');
+      });
+
+      await expect(service.findAll()).rejects.toThrow('DB query error');
     });
   });
 
@@ -198,6 +214,12 @@ describe('StatesService', () => {
 
       expect(result).toEqual(state);
       expect(cacheService.delete).toHaveBeenCalledWith('states:all');
+    });
+
+    it('should propagate errors from delete operation', async () => {
+      model.findByIdAndDelete.mockRejectedValue(new Error('DB delete error'));
+
+      await expect(service.remove('s1')).rejects.toThrow('DB delete error');
     });
   });
 });
