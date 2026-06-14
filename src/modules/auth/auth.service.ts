@@ -87,6 +87,9 @@ export class AuthService {
       await this.refreshTokenService.revokeToken(hashedToken._id.toString());
 
       const user = await this.usersService.findOne(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('Invalid or expired refresh token');
+      }
 
       return this.login(user);
     } catch (error) {
