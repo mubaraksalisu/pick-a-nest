@@ -3,6 +3,12 @@ import { getModelToken } from '@nestjs/mongoose';
 import { CategoriesService } from '../categories/categories.service';
 import { UsersService } from '../users/users.service';
 import { CacheService } from 'src/infrastructure/cache/cache.service';
+import { AwsS3Service } from 'src/infrastructure/aws-s3/aws-s3.service';
+jest.mock('src/infrastructure/aws-s3/aws-s3.service', () => ({
+  AwsS3Service: jest.fn().mockImplementation(() => ({
+    getPublicUrl: jest.fn().mockReturnValue('url'),
+  })),
+}));
 import { PropertiesService } from './properties.service';
 import { Property } from './schemas/property.schema';
 import { NotFoundException } from '@nestjs/common';
@@ -30,6 +36,7 @@ describe('PropertiesService', () => {
     ownerId: 'u1',
     categoryId: 'c1',
     createdAt: new Date(),
+    media: ['media1'],
   };
 
   const createPopulateQuery = (result: any) => ({
@@ -80,6 +87,7 @@ describe('PropertiesService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: CategoriesService, useValue: categoriesService },
         { provide: CacheService, useValue: cacheService },
+          { provide: AwsS3Service, useValue: { getPublicUrl: jest.fn().mockReturnValue('url') } },
       ],
     }).compile();
 
@@ -136,12 +144,14 @@ describe('PropertiesService', () => {
       const result = await service.findOne('p1');
 
       expect(propertyModel.findById).toHaveBeenCalledWith('p1');
+      // After findOne, media URLs are transformed via AwsS3Service
+      const transformedProperty = { ...mockProperty, media: ['url'] };
       expect(cacheService.set).toHaveBeenCalledWith(
         'property:p1',
-        mockProperty,
+        transformedProperty,
         5 * 60 * 1000,
       );
-      expect(result).toEqual(mockProperty);
+      expect(result).toEqual(transformedProperty);
     });
 
     it('should throw NotFoundException when property does not exist', async () => {
