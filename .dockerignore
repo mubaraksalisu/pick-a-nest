@@ -8,7 +8,7 @@ coverage
 
 # Local env and secrets
 .env
-.env.test
+.env.*
 secrets.dev.yaml
 values.dev.yaml
 
@@ -31,6 +31,7 @@ docker-compose.override.yml
 # Logs and temporary files
 npm-debug.log
 logs
+*.log
 
 # Misc
 LICENSE
