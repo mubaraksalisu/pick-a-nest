@@ -15,19 +15,32 @@ services:
       - 3000:3000
     volumes:
       - .:/app
+      - /app/node_modules
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   redis:
     image: redis:8.8-m03-trixie
     ports:
       - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
   db:
     image: mongo:8.0.20
     ports:
       - 27017:27017
     volumes:
       - real_estate:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   real_estate:

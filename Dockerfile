@@ -11,7 +11,7 @@ WORKDIR /app
 # Install dependencies as root
 COPY package*.json ./
 
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
