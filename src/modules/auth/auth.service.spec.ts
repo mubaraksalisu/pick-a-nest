@@ -78,6 +78,7 @@ describe('AuthService', () => {
           useValue: {
             sign: jest.fn(),
             verify: jest.fn(),
+            decode: jest.fn(),
           },
         },
         {
@@ -131,6 +132,9 @@ describe('AuthService', () => {
     queueService = module.get<QueuesService>(QueuesService);
 
     setupCryptoMocks();
+    (jwtService.decode as jest.Mock).mockReturnValue({
+      exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+    });
   });
 
   afterEach(() => {
@@ -273,10 +277,12 @@ describe('AuthService', () => {
     it('should return access and refresh tokens for active user', async () => {
       const mockAccessToken = 'accessToken';
       const mockRefreshToken = 'refreshToken';
+      const mockExp = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
 
       (jwtService.sign as jest.Mock)
         .mockReturnValueOnce(mockRefreshToken)
         .mockReturnValueOnce(mockAccessToken);
+      (jwtService.decode as jest.Mock).mockReturnValue({ exp: mockExp });
       (configService.get as jest.Mock).mockImplementation((key: string) => {
         if (key === 'REFRESH_EXPIRES_IN') return '30d';
         if (key === 'ACCESS_EXPIRES_IN') return '1h';
@@ -298,15 +304,39 @@ describe('AuthService', () => {
       );
       expect(configService.get).toHaveBeenCalledWith('REFRESH_EXPIRES_IN');
       expect(configService.get).toHaveBeenCalledWith('ACCESS_EXPIRES_IN');
+      expect(jwtService.decode).toHaveBeenCalledWith(mockRefreshToken);
       expect(refreshTokenService.createToken).toHaveBeenCalledWith(
         mockUser._id,
         mockRefreshToken,
-        expect.any(Date),
+        new Date(mockExp * 1000),
       );
       expect(result).toEqual({
         accessToken: mockAccessToken,
         refreshToken: mockRefreshToken,
       });
+    });
+
+    it('should derive the refresh token DB expiry from the signed token exp claim, not a hardcoded duration', async () => {
+      const mockRefreshToken = 'refreshToken';
+      const oneHourExp = Math.floor(Date.now() / 1000) + 60 * 60;
+
+      (jwtService.sign as jest.Mock)
+        .mockReturnValueOnce(mockRefreshToken)
+        .mockReturnValueOnce('accessToken');
+      (jwtService.decode as jest.Mock).mockReturnValue({ exp: oneHourExp });
+      (configService.get as jest.Mock).mockImplementation((key: string) => {
+        if (key === 'REFRESH_EXPIRES_IN') return '1h';
+        if (key === 'ACCESS_EXPIRES_IN') return '15m';
+        return undefined;
+      });
+
+      await service.login(mockUser);
+
+      expect(refreshTokenService.createToken).toHaveBeenCalledWith(
+        mockUser._id,
+        mockRefreshToken,
+        new Date(oneHourExp * 1000),
+      );
     });
 
     it('should throw UnauthorizedException when account is inactive', async () => {
@@ -696,13 +726,20 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('should revoke the token when it is valid', async () => {
+    it('should look up and revoke the matching refresh token record when the token is valid', async () => {
       (jwtService.verify as jest.Mock).mockReturnValue({ sub: 'userId' });
+      (refreshTokenService.validateToken as jest.Mock).mockResolvedValue({
+        _id: 'tokenId',
+      });
 
       await service.logout('validToken');
 
       expect(jwtService.verify).toHaveBeenCalledWith('validToken');
-      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith('userId');
+      expect(refreshTokenService.validateToken).toHaveBeenCalledWith(
+        'userId',
+        'validToken',
+      );
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith('tokenId');
     });
 
     it('should ignore invalid tokens and not throw', async () => {
@@ -711,6 +748,7 @@ describe('AuthService', () => {
       });
 
       await expect(service.logout('badToken')).resolves.toBeUndefined();
+      expect(refreshTokenService.validateToken).not.toHaveBeenCalled();
       expect(refreshTokenService.revokeToken).not.toHaveBeenCalled();
     });
 
@@ -720,6 +758,7 @@ describe('AuthService', () => {
       });
 
       await expect(service.logout('malformedToken')).resolves.toBeUndefined();
+      expect(refreshTokenService.validateToken).not.toHaveBeenCalled();
       expect(refreshTokenService.revokeToken).not.toHaveBeenCalled();
     });
 
@@ -729,26 +768,35 @@ describe('AuthService', () => {
       });
 
       await expect(service.logout('expiredToken')).resolves.toBeUndefined();
+      expect(refreshTokenService.validateToken).not.toHaveBeenCalled();
       expect(refreshTokenService.revokeToken).not.toHaveBeenCalled();
     });
 
     it('should ignore revoke errors and not throw', async () => {
       (jwtService.verify as jest.Mock).mockReturnValue({ sub: 'userId' });
+      (refreshTokenService.validateToken as jest.Mock).mockResolvedValue({
+        _id: 'tokenId',
+      });
       (refreshTokenService.revokeToken as jest.Mock).mockRejectedValue(
         new Error('Database error'),
       );
 
       await expect(service.logout('validToken')).resolves.toBeUndefined();
-      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith('userId');
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith('tokenId');
     });
 
-    it('should call revokeToken with payload sub when verify returns partial payload', async () => {
-      (jwtService.verify as jest.Mock).mockReturnValue({ sub: undefined });
+    it('should not attempt to revoke when no matching token record is found', async () => {
+      (jwtService.verify as jest.Mock).mockReturnValue({ sub: 'userId' });
+      (refreshTokenService.validateToken as jest.Mock).mockResolvedValue(
+        null,
+      );
 
-      await service.logout('validToken');
-
-      expect(jwtService.verify).toHaveBeenCalledWith('validToken');
-      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith(undefined);
+      await expect(service.logout('validToken')).resolves.toBeUndefined();
+      expect(refreshTokenService.validateToken).toHaveBeenCalledWith(
+        'userId',
+        'validToken',
+      );
+      expect(refreshTokenService.revokeToken).not.toHaveBeenCalled();
     });
   });
 });

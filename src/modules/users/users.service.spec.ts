@@ -18,12 +18,16 @@ describe('UsersService', () => {
   function mockUserModel(this: any, dto: any) {
     this.data = dto;
     this.toObject = jest.fn().mockReturnValue({ _id: 'u1', ...dto });
-    this.save = jest.fn().mockResolvedValue({
-      _id: 'u1',
-      ...dto,
-      toObject: this.toObject,
+    this.save = jest.fn().mockImplementation(() => {
+      if (mockUserModel.nextSaveError) {
+        const error = mockUserModel.nextSaveError;
+        mockUserModel.nextSaveError = null;
+        return Promise.reject(error);
+      }
+      return Promise.resolve({ _id: 'u1', ...dto, toObject: this.toObject });
     });
   }
+  mockUserModel.nextSaveError = null as any;
 
   const createSkipLimitSelectQuery = (result: any) => ({
     skip: jest.fn().mockReturnThis(),
@@ -96,6 +100,31 @@ describe('UsersService', () => {
         email: 'email@example.com',
       });
       expect(result).not.toHaveProperty('password');
+    });
+
+    it('should convert a concurrent duplicate-key save error into ConflictException', async () => {
+      model.findOne.mockResolvedValue(null);
+      (bcrypt.genSalt as jest.Mock).mockResolvedValue('salt');
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
+      mockUserModel.nextSaveError = Object.assign(
+        new Error('E11000 duplicate key error'),
+        { code: 11000 },
+      );
+
+      await expect(service.create(createUserDto as any)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should propagate non-duplicate-key save errors', async () => {
+      model.findOne.mockResolvedValue(null);
+      (bcrypt.genSalt as jest.Mock).mockResolvedValue('salt');
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
+      mockUserModel.nextSaveError = new Error('Database unavailable');
+
+      await expect(service.create(createUserDto as any)).rejects.toThrow(
+        'Database unavailable',
+      );
     });
   });
 

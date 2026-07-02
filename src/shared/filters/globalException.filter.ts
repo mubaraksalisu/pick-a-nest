@@ -37,7 +37,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           (errorResponse as any).error ||
           'Internal server error';
 
-    this.logger.error(message, {
+    // Log the real error message for non-HTTP exceptions even though the
+    // client only ever sees the generic "Internal server error" response.
+    const logMessage =
+      !isHttpException && exception instanceof Error
+        ? exception.message
+        : message;
+
+    this.logger.error(logMessage, {
       status,
       path: request.url,
       method: request.method,

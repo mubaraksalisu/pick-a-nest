@@ -11,7 +11,7 @@ jest.mock('src/infrastructure/aws-s3/aws-s3.service', () => ({
 }));
 import { PropertiesService } from './properties.service';
 import { Property } from './schemas/property.schema';
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 interface PaginatedProperties {
   data: any[];
@@ -210,6 +210,29 @@ describe('PropertiesService', () => {
       expect(result.page).toBe(1);
       expect(result.limit).toBe(10);
       expect(result.total).toBe(1);
+    });
+
+    it('should filter using the schema field names bedroom/bathroom', async () => {
+      cacheService.get.mockImplementation((key: string) => {
+        if (key === 'properties:list:version') return Promise.resolve(1);
+        return Promise.resolve(null);
+      });
+      const queryChain = createFindQuery([mockProperty]);
+      propertyModel.find.mockReturnValueOnce(queryChain);
+      propertyModel.countDocuments.mockResolvedValueOnce(1);
+
+      await service.findAll({
+        page: 1,
+        limit: 10,
+        bedrooms: 2,
+        bathrooms: 1,
+      } as any);
+
+      expect(propertyModel.find).toHaveBeenCalledWith({
+        reviewStatus: 'approved',
+        bedroom: { $gte: 2 },
+        bathroom: { $gte: 1 },
+      });
     });
   });
 
@@ -419,7 +442,7 @@ describe('PropertiesService', () => {
 
       await expect(
         service.update('p1', 'u1', { title: 'Updated Title' } as any),
-      ).rejects.toThrowError();
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

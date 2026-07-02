@@ -1,8 +1,8 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -145,7 +145,7 @@ export class PropertiesService {
     }
 
     if (authUserId.toString() !== property.ownerId.toString())
-      throw new UnauthorizedException('Only property owner can update');
+      throw new ForbiddenException('Only property owner can update');
 
     Object.assign(property, updatePropertyDto);
     if (property.reviewStatus !== 'pending') {
@@ -388,8 +388,8 @@ export class PropertiesService {
     if (state) filters.state = new RegExp(state, 'i');
     if (categoryId) filters.categoryId = categoryId;
     if (type) filters.type = type;
-    if (bedrooms) filters.bedrooms = { $gte: bedrooms };
-    if (bathrooms) filters.bathrooms = { $gte: bathrooms };
+    if (bedrooms) filters.bedroom = { $gte: bedrooms };
+    if (bathrooms) filters.bathroom = { $gte: bathrooms };
 
     if (minPrice || maxPrice) {
       filters.price = {};

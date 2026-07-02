@@ -42,10 +42,12 @@ export class AuthService {
       expiresIn: this.configService.get('REFRESH_EXPIRES_IN'),
     });
 
+    const { exp } = this.jwtService.decode<{ exp: number }>(refreshToken);
+
     await this.refreshTokenService.createToken(
       user._id,
       refreshToken,
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days matching .env REFRESH_EXPIRES_IN
+      new Date(exp * 1000),
     );
 
     const accessToken = this.jwtService.sign(payload, {
@@ -118,7 +120,15 @@ export class AuthService {
   async logout(token: string) {
     try {
       const payload = await this.jwtService.verify(token);
-      await this.refreshTokenService.revokeToken(payload.sub);
+      const hashedToken = await this.refreshTokenService.validateToken(
+        payload.sub,
+        token,
+      );
+      if (hashedToken) {
+        await this.refreshTokenService.revokeToken(
+          hashedToken._id.toString(),
+        );
+      }
     } catch (error) {
       return; // Token is invalid or already revoked, so we can ignore it
     }

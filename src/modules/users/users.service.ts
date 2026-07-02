@@ -16,19 +16,29 @@ export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
   async create(createUserDto: CreateUserDto) {
-    let user = await this.userModel.findOne({ email: createUserDto.email });
-    if (user) throw new ConflictException('User with this email already exist');
+    const existingUser = await this.userModel.findOne({
+      email: createUserDto.email,
+    });
+    if (existingUser)
+      throw new ConflictException('User with this email already exist');
 
     const salt = await bcrypt.genSalt(10);
     const encryptedPassword = await bcrypt.hash(createUserDto.password, salt);
 
-    user = new this.userModel({
+    const user = new this.userModel({
       ...createUserDto,
       password: encryptedPassword,
     });
-    const { password, ...newUser } = (await user.save()).toObject();
 
-    return newUser;
+    try {
+      const { password, ...newUser } = (await user.save()).toObject();
+      return newUser;
+    } catch (error) {
+      if ((error as { code?: number }).code === 11000) {
+        throw new ConflictException('User with this email already exist');
+      }
+      throw error;
+    }
   }
 
   async findAll({ page, limit }: { page: number; limit: number }) {
