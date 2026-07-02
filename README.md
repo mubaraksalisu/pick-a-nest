@@ -72,7 +72,8 @@ The `compose.yaml` defines three services: `server`, `db` (MongoDB), and `redis`
 
 Notes about the `Dockerfile`:
 
-- The container currently runs the development command `npm run start:dev` by default. See [Dockerfile](Dockerfile) to adjust for production.
+- It's a multi-stage build with three targets: `development` (runs `npm run start:dev` with the source mounted, used by `compose.yaml`), `builder` (compiles the app), and `production` (installs only production dependencies and runs the compiled output via `node dist/main.js`).
+- Build the production image directly with `docker build --target production -t pick-a-nest .`
 
 ## Configuration
 
@@ -97,23 +98,38 @@ http://localhost:3000/docs
 
 ## Testing
 
-Run unit tests:
+### Unit tests
 
 ```bash
 npm run test
 ```
 
-Run e2e tests:
+Every service (`*.service.ts`) has 100% statement/branch/function/line coverage. Unit tests fully mock the Mongoose model and external services, so they don't need MongoDB, Redis, or any real network access.
+
+Generate a coverage report:
+
+```bash
+npm run test:cov
+```
+
+### E2E tests
 
 ```bash
 npm run test:e2e
 ```
 
-Generate coverage:
+E2E tests boot the real `AppModule` and need a reachable MongoDB and Redis matching the credentials in `.env.test` (see `.env.example` for the variable names). `QueuesService` is mocked in the shared test harness (`test/utils/test-app.ts`) so no real emails are sent.
 
-```bash
-npm run test:cov
-```
+Suites in `test/`:
+
+- `app.e2e-spec.ts` — basic app bootstrap smoke test
+- `auth.e2e-spec.ts` — full register → verify-email → login → refresh → logout lifecycle
+- `authorization.e2e-spec.ts` — role guards, ownership checks, and the visit/property access guards
+- `visits-booking.e2e-spec.ts` — visit creation, scheduling-conflict detection, confirm/reschedule/cancel
+- `validation.e2e-spec.ts` — global `ValidationPipe` behavior (whitelisting, type coercion, pattern validation)
+- `properties-review.e2e-spec.ts` — the property review workflow and cache invalidation on approve/reject/edit
+
+Because these tests share one live database, `test/jest-e2e.json` sets `maxWorkers: 1` so suites run serially rather than racing each other over the same collections. Shared fixtures/setup helpers live in `test/utils/`.
 
 ## Code quality
 
@@ -128,10 +144,10 @@ npm run lint
 
 Top-level source folders:
 
-- `src/modules` — feature modules (auth, users, properties, categories, states, favorites, visits, reviews, etc.)
+- `src/modules` — feature modules (`auth`, `users`, `properties`, `categories`, `states`, `favorites`, `visits`, `home`, `health`); property review/approval lives inside the `properties` module rather than a separate module
 - `src/infrastructure` — platform integrations (AWS S3, cache, mail, queues)
 - `src/shared` — guards, filters, and utilities
-- `test` — e2e test suites
+- `test` — e2e test suites and shared test utilities (`test/utils`)
 
 ## Contributing
 
@@ -140,13 +156,3 @@ If you'd like to contribute, please open an issue or a pull request. Include a s
 ## License
 
 This repository is currently marked as `UNLICENSED` in [package.json](package.json). If you want to add a license, update `package.json` and add a `LICENSE` file.
-
----
-
-If you'd like, I can also:
-
-- Add a `.env.example` file based on the variables above
-- Add a short `CONTRIBUTING.md` with local development steps
-- Update the `Dockerfile` to include a production image target
-
-Tell me which of those you'd like next.
