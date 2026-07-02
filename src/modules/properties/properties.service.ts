@@ -421,13 +421,28 @@ export class PropertiesService {
   private formatPropertyMedia<T extends { media?: string[] }>(
     property: T | null,
   ): T | null {
-    if (!property || !Array.isArray(property.media)) {
+    if (!property) {
       return property;
     }
 
+    // Mongoose Documents (as opposed to .lean() query results, which are
+    // already plain objects) must be converted before spreading -- spreading
+    // a live Document copies its internal bookkeeping (`$__`, `_doc`, ...)
+    // instead of the schema fields, corrupting the serialized API response.
+    const plainProperty: any =
+      typeof (property as any).toObject === 'function'
+        ? (property as any).toObject()
+        : property;
+
+    if (!Array.isArray(plainProperty.media)) {
+      return plainProperty as T;
+    }
+
     return {
-      ...property,
-      media: property.media.map((key) => this.awsS3Service.getPublicUrl(key)),
+      ...plainProperty,
+      media: plainProperty.media.map((key: string) =>
+        this.awsS3Service.getPublicUrl(key),
+      ),
     } as T;
   }
 }
