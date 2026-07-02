@@ -11,7 +11,11 @@ jest.mock('src/infrastructure/aws-s3/aws-s3.service', () => ({
 }));
 import { PropertiesService } from './properties.service';
 import { Property } from './schemas/property.schema';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 interface PaginatedProperties {
   data: any[];
@@ -87,7 +91,10 @@ describe('PropertiesService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: CategoriesService, useValue: categoriesService },
         { provide: CacheService, useValue: cacheService },
-          { provide: AwsS3Service, useValue: { getPublicUrl: jest.fn().mockReturnValue('url') } },
+        {
+          provide: AwsS3Service,
+          useValue: { getPublicUrl: jest.fn().mockReturnValue('url') },
+        },
       ],
     }).compile();
 
@@ -203,8 +210,12 @@ describe('PropertiesService', () => {
         limit: 10,
       })) as PaginatedProperties;
 
-      expect(propertyModel.find).toHaveBeenCalledWith({ reviewStatus: 'approved' });
-      expect(propertyModel.countDocuments).toHaveBeenCalledWith({ reviewStatus: 'approved' });
+      expect(propertyModel.find).toHaveBeenCalledWith({
+        reviewStatus: 'approved',
+      });
+      expect(propertyModel.countDocuments).toHaveBeenCalledWith({
+        reviewStatus: 'approved',
+      });
       expect(cacheService.set).toHaveBeenCalled();
       expect(result.data).toEqual([mockProperty]);
       expect(result.page).toBe(1);
@@ -234,6 +245,113 @@ describe('PropertiesService', () => {
         bathroom: { $gte: 1 },
       });
     });
+
+    it('should filter by price range when minPrice/maxPrice are provided', async () => {
+      cacheService.get.mockImplementation((key: string) => {
+        if (key === 'properties:list:version') return Promise.resolve(1);
+        return Promise.resolve(null);
+      });
+      const queryChain = createFindQuery([mockProperty]);
+      propertyModel.find.mockReturnValueOnce(queryChain);
+      propertyModel.countDocuments.mockResolvedValueOnce(1);
+
+      await service.findAll({
+        page: 1,
+        limit: 10,
+        minPrice: 100,
+        maxPrice: 500,
+      } as any);
+
+      expect(propertyModel.find).toHaveBeenCalledWith({
+        reviewStatus: 'approved',
+        price: { $gte: 100, $lte: 500 },
+      });
+    });
+
+    it('should apply a full-text search filter when search is provided', async () => {
+      cacheService.get.mockImplementation((key: string) => {
+        if (key === 'properties:list:version') return Promise.resolve(1);
+        return Promise.resolve(null);
+      });
+      const queryChain = createFindQuery([mockProperty]);
+      propertyModel.find.mockReturnValueOnce(queryChain);
+      propertyModel.countDocuments.mockResolvedValueOnce(1);
+
+      await service.findAll({
+        page: 1,
+        limit: 10,
+        search: 'loft',
+      } as any);
+
+      expect(propertyModel.find).toHaveBeenCalledWith({
+        reviewStatus: 'approved',
+        $text: { $search: 'loft' },
+      });
+    });
+
+    it('should filter by city, state, category, and type', async () => {
+      cacheService.get.mockImplementation((key: string) => {
+        if (key === 'properties:list:version') return Promise.resolve(1);
+        return Promise.resolve(null);
+      });
+      const queryChain = createFindQuery([mockProperty]);
+      propertyModel.find.mockReturnValueOnce(queryChain);
+      propertyModel.countDocuments.mockResolvedValueOnce(1);
+
+      await service.findAll({
+        page: 1,
+        limit: 10,
+        city: 'Austin',
+        state: 'TX',
+        categoryId: 'c1',
+        type: 'apartment',
+      } as any);
+
+      expect(propertyModel.find).toHaveBeenCalledWith({
+        reviewStatus: 'approved',
+        city: expect.any(RegExp),
+        state: expect.any(RegExp),
+        categoryId: 'c1',
+        type: 'apartment',
+      });
+    });
+
+    it('should apply default pagination and sort when the query is empty', async () => {
+      cacheService.get.mockImplementation((key: string) => {
+        if (key === 'properties:list:version') return Promise.resolve(1);
+        return Promise.resolve(null);
+      });
+      const queryChain = createFindQuery([mockProperty]);
+      propertyModel.find.mockReturnValueOnce(queryChain);
+      propertyModel.countDocuments.mockResolvedValueOnce(1);
+
+      const result = (await service.findAll({} as any)) as PaginatedProperties;
+
+      expect(queryChain.skip).toHaveBeenCalledWith(0);
+      expect(queryChain.limit).toHaveBeenCalledWith(10);
+      expect(queryChain.sort).toHaveBeenCalledWith({ createdAt: -1 });
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
+
+    it('should sort ascending when sortOrder is asc', async () => {
+      cacheService.get.mockImplementation((key: string) => {
+        if (key === 'properties:list:version') return Promise.resolve(1);
+        return Promise.resolve(null);
+      });
+      const queryChain = createFindQuery([mockProperty]);
+      propertyModel.find.mockReturnValueOnce(queryChain);
+      propertyModel.countDocuments.mockResolvedValueOnce(1);
+
+      await service.findAll({
+        page: 1,
+        limit: 10,
+        sortBy: 'price',
+        sortOrder: 'asc',
+      } as any);
+
+      expect(queryChain.sort).toHaveBeenCalledWith({ price: 1 });
+    });
   });
 
   describe('findFeatured', () => {
@@ -249,7 +367,7 @@ describe('PropertiesService', () => {
         });
       });
 
-      const result = (await service.findFeatured(1, 10)) as PaginatedProperties;
+      const result = (await service.findFeatured()) as PaginatedProperties;
 
       expect(result.data).toEqual([mockProperty]);
       expect(propertyModel.find).not.toHaveBeenCalled();
@@ -266,7 +384,10 @@ describe('PropertiesService', () => {
 
       const result = (await service.findFeatured(1, 10)) as PaginatedProperties;
 
-      expect(propertyModel.find).toHaveBeenCalledWith({ featured: true, reviewStatus: 'approved' });
+      expect(propertyModel.find).toHaveBeenCalledWith({
+        featured: true,
+        reviewStatus: 'approved',
+      });
       expect(propertyModel.countDocuments).toHaveBeenCalledWith({
         featured: true,
         reviewStatus: 'approved',
@@ -289,7 +410,7 @@ describe('PropertiesService', () => {
         });
       });
 
-      const result = (await service.findLatest(1, 10)) as PaginatedProperties;
+      const result = (await service.findLatest()) as PaginatedProperties;
 
       expect(result.data).toEqual([mockProperty]);
       expect(propertyModel.find).not.toHaveBeenCalled();
@@ -321,10 +442,14 @@ describe('PropertiesService', () => {
       propertyModel.find.mockReturnValueOnce(queryChain);
       propertyModel.countDocuments.mockResolvedValueOnce(1);
 
-      const result = (await service.findPending(1, 10)) as PaginatedProperties;
+      const result = (await service.findPending()) as PaginatedProperties;
 
-      expect(propertyModel.find).toHaveBeenCalledWith({ reviewStatus: 'pending' });
-      expect(propertyModel.countDocuments).toHaveBeenCalledWith({ reviewStatus: 'pending' });
+      expect(propertyModel.find).toHaveBeenCalledWith({
+        reviewStatus: 'pending',
+      });
+      expect(propertyModel.countDocuments).toHaveBeenCalledWith({
+        reviewStatus: 'pending',
+      });
       expect(result.data).toEqual([pendingProperty]);
       expect(result.total).toBe(1);
     });
@@ -349,6 +474,14 @@ describe('PropertiesService', () => {
       expect(cacheService.delete).toHaveBeenCalledWith('property:p1');
       expect(result.reviewStatus).toBe('approved');
     });
+
+    it('should throw when the property does not exist', async () => {
+      propertyModel.findById.mockReturnValueOnce(null);
+
+      await expect(service.approveReview('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 
   describe('rejectReview', () => {
@@ -369,6 +502,14 @@ describe('PropertiesService', () => {
       expect(existingProperty.save).toHaveBeenCalled();
       expect(cacheService.delete).toHaveBeenCalledWith('property:p1');
       expect(result.reviewStatus).toBe('rejected');
+    });
+
+    it('should throw when the property does not exist', async () => {
+      propertyModel.findById.mockReturnValueOnce(null);
+
+      await expect(service.rejectReview('missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -404,6 +545,16 @@ describe('PropertiesService', () => {
           categoryId: 'c1',
         } as any),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException when neither currentUserId nor ownerId is provided', async () => {
+      await expect(
+        service.create({
+          title: 'New property',
+          categoryId: 'c1',
+        } as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(usersService.findOne).not.toHaveBeenCalled();
     });
   });
 
@@ -443,6 +594,14 @@ describe('PropertiesService', () => {
       await expect(
         service.update('p1', 'u1', { title: 'Updated Title' } as any),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw when the property does not exist', async () => {
+      propertyModel.findById.mockReturnValueOnce(null);
+
+      await expect(
+        service.update('missing', 'u1', { title: 'Updated Title' } as any),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

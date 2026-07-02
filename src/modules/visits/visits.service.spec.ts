@@ -428,6 +428,43 @@ describe('VisitsService', () => {
       expect(result.total).toBe(1);
       expect(result.data).toHaveLength(1);
     });
+
+    it('should apply status and date-range filters when provided', async () => {
+      const chain = createPaginatedChain([buildVisitDoc()]);
+      visitModel.find.mockReturnValueOnce(chain);
+      visitModel.countDocuments.mockResolvedValueOnce(1);
+
+      await service.findMyVisits(customerId, {
+        page: 1,
+        limit: 10,
+        status: VisitStatus.CONFIRMED,
+        fromDate: '2025-01-01',
+        toDate: '2025-01-31',
+      } as any);
+
+      expect(visitModel.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customerId,
+          deletedAt: null,
+          status: VisitStatus.CONFIRMED,
+          endUtc: { $gt: expect.any(Date) },
+          startUtc: { $lt: expect.any(Date) },
+        }),
+      );
+    });
+
+    it('should default to page 1 and limit 10 when neither is provided', async () => {
+      const chain = createPaginatedChain([]);
+      visitModel.find.mockReturnValueOnce(chain);
+      visitModel.countDocuments.mockResolvedValueOnce(0);
+
+      const result = await service.findMyVisits(customerId, {} as any);
+
+      expect(chain.skip).toHaveBeenCalledWith(0);
+      expect(chain.limit).toHaveBeenCalledWith(10);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+    });
   });
 
   describe('findAgentVisits', () => {
@@ -464,6 +501,19 @@ describe('VisitsService', () => {
         }),
       );
       expect(result).toHaveLength(1);
+    });
+
+    it('should default to a 7-day window when days is not provided', async () => {
+      const chain = createSortOnlyChain([]);
+      visitModel.find.mockReturnValueOnce(chain);
+
+      await service.findUpcoming(customerId);
+
+      const callArgs = visitModel.find.mock.calls[0][0];
+      const diffDays =
+        (callArgs.startUtc.$lte.getTime() - callArgs.startUtc.$gte.getTime()) /
+        (24 * 60 * 60 * 1000);
+      expect(diffDays).toBeCloseTo(7, 1);
     });
   });
 
@@ -637,6 +687,90 @@ describe('VisitsService', () => {
       await expect(
         service.changeStatus(visitId, { status: VisitStatus.CONFIRMED }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should set rescheduledAt and notify when moving to rescheduled', async () => {
+      const visit = buildVisitDoc({ status: VisitStatus.CONFIRMED });
+      visitModel.findById.mockResolvedValueOnce(visit);
+
+      await service.changeStatus(visitId, {
+        status: VisitStatus.RESCHEDULED,
+      });
+
+      expect(visit.status).toBe(VisitStatus.RESCHEDULED);
+      expect(visit.rescheduledAt).toBeInstanceOf(Date);
+      expect(queuesService.queueEmail).toHaveBeenCalledWith(
+        EMAIL_JOBS.VISIT_RESCHEDULED,
+        expect.anything(),
+      );
+    });
+
+    it('should set completedAt and cancelledAt for their respective transitions', async () => {
+      const confirmedVisit = buildVisitDoc({ status: VisitStatus.CONFIRMED });
+      visitModel.findById.mockResolvedValueOnce(confirmedVisit);
+
+      await service.changeStatus(visitId, { status: VisitStatus.COMPLETED });
+
+      expect(confirmedVisit.status).toBe(VisitStatus.COMPLETED);
+      expect(confirmedVisit.completedAt).toBeInstanceOf(Date);
+      expect(queuesService.queueEmail).toHaveBeenCalledWith(
+        EMAIL_JOBS.VISIT_SCHEDULED,
+        expect.anything(),
+      );
+
+      const pendingVisit = buildVisitDoc({ status: VisitStatus.PENDING });
+      visitModel.findById.mockResolvedValueOnce(pendingVisit);
+
+      await service.changeStatus(visitId, { status: VisitStatus.CANCELLED });
+
+      expect(pendingVisit.status).toBe(VisitStatus.CANCELLED);
+      expect(pendingVisit.cancelledAt).toBeInstanceOf(Date);
+      expect(queuesService.queueEmail).toHaveBeenCalledWith(
+        EMAIL_JOBS.VISIT_CANCELED,
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('parseVisitWindow (via create)', () => {
+    it('should throw BadRequestException when the visit date cannot be parsed', async () => {
+      await expect(
+        service.create(buildCreateDto({ visitDate: 'not-a-date' }) as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('emitVisitNotificationForCreate (private)', () => {
+    it('should send VISIT_CONFIRMED emails when invoked with a confirmed status', async () => {
+      const visit = buildVisitDoc({ status: VisitStatus.CONFIRMED });
+
+      await (service as any).emitVisitNotificationForCreate(
+        visit,
+        agentId,
+        customerId,
+        propertyId,
+        'note',
+        VisitStatus.CONFIRMED,
+      );
+
+      expect(queuesService.queueEmail).toHaveBeenCalledWith(
+        EMAIL_JOBS.VISIT_CONFIRMED,
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('assertValidWindow', () => {
+    it('should throw BadRequestException when either date is invalid', () => {
+      const invalid = luxon.DateTime.invalid('test-invalid-reason');
+      const valid = luxon.DateTime.utc().plus({ days: 1 });
+
+      expect(() => (service as any).assertValidWindow(invalid, valid)).toThrow(
+        BadRequestException,
+      );
+      expect(() => (service as any).assertValidWindow(valid, invalid)).toThrow(
+        BadRequestException,
+      );
     });
   });
 });

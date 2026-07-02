@@ -308,6 +308,34 @@ describe('UsersService', () => {
     });
   });
 
+  describe('activateUser', () => {
+    it('should throw NotFoundException when user is not found', async () => {
+      model.findById.mockResolvedValue(null);
+
+      await expect(service.activateUser('u1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should activate the user and mark the email as verified', async () => {
+      const user: any = {
+        _id: 'u1',
+        status: 'inactive',
+        emailVerified: false,
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      model.findById.mockResolvedValue(user);
+
+      const result = await service.activateUser('u1');
+
+      expect(user.status).toBe('active');
+      expect(user.emailVerified).toBe(true);
+      expect(user.emailVerifiedAt).toBeInstanceOf(Date);
+      expect(user.save).toHaveBeenCalled();
+      expect(result).toBe(true);
+    });
+  });
+
   describe('update', () => {
     it('should throw NotFoundException when user is not found', async () => {
       model.findByIdAndUpdate.mockReturnValue(createSelectChain(null));

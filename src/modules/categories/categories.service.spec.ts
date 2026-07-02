@@ -78,6 +78,16 @@ describe('Categories', () => {
   });
 
   describe('findAll', () => {
+    it('Should return cached categories without querying the database', async () => {
+      const cached = [mockCategoryDto];
+      cacheService.get.mockResolvedValueOnce(cached);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual(cached);
+      expect(model.find).not.toHaveBeenCalled();
+    });
+
     it('Should return all categories', async () => {
       model.find.mockReturnValue({
         sort: jest.fn().mockResolvedValue([mockCategoryDto]),

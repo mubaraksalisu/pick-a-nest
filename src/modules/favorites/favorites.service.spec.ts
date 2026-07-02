@@ -21,10 +21,9 @@ function mockFavoriteModel(this: any, dto: any) {
   }
 }
 
-const createPopulateQuery = (result: any) => (
-  {
-    populate: jest.fn().mockResolvedValue(result),
-  });
+const createPopulateQuery = (result: any) => ({
+  populate: jest.fn().mockResolvedValue(result),
+});
 
 mockFavoriteModel.find = jest.fn();
 mockFavoriteModel.findById = jest.fn();
@@ -46,7 +45,7 @@ describe('FavoritesService', () => {
         FavoritesService,
         { provide: getModelToken(Favorite.name), useValue: mockFavoriteModel },
         { provide: UsersService, useValue: usersService },
-        { provide: PropertiesService, useValue: propertiesService }
+        { provide: PropertiesService, useValue: propertiesService },
       ],
     }).compile();
 
@@ -85,21 +84,37 @@ describe('FavoritesService', () => {
     it('should throw NotFoundException for invalid user', async () => {
       model.find.mockReturnValue(createPopulateQuery(null));
 
-      await expect(service.getMyFavorites('invalidUser')).rejects.toThrow(NotFoundException);
+      await expect(service.getMyFavorites('invalidUser')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('findOne', () => {
+    it('should return the favorite when found', async () => {
+      const favorite = { _id: 'f1', userId: 'u1', propertyId: 'p1' };
+      model.findById.mockResolvedValue(favorite);
+
+      const result = await service.findOne('f1');
+
+      expect(result).toEqual(favorite);
+      expect(model.findById).toHaveBeenCalledWith('f1');
+    });
+
     it('should handle invalid ObjectId format', async () => {
       model.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('invalid-id')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('invalid-id')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should reject on malformed ID', async () => {
       model.findById.mockRejectedValue(new Error('Invalid ID format'));
 
-      await expect(service.findOne('invalid-id')).rejects.toThrow('Invalid ID format');
+      await expect(service.findOne('invalid-id')).rejects.toThrow(
+        'Invalid ID format',
+      );
     });
   });
 
@@ -109,7 +124,9 @@ describe('FavoritesService', () => {
       propertiesService.findOne.mockResolvedValue({ _id: 'p1' });
       model.findOne.mockResolvedValue({ _id: 'f1' });
 
-      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow(ConflictException);
+      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should save new favorite when user and property exist', async () => {
@@ -129,7 +146,9 @@ describe('FavoritesService', () => {
         new NotFoundException('User not found'),
       );
 
-      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow(NotFoundException);
+      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(usersService.findOne).toHaveBeenCalledWith('u1');
       expect(propertiesService.findOne).not.toHaveBeenCalled();
     });
@@ -140,7 +159,9 @@ describe('FavoritesService', () => {
         new NotFoundException('Property not found'),
       );
 
-      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow(NotFoundException);
+      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should handle database save error', async () => {
@@ -148,7 +169,9 @@ describe('FavoritesService', () => {
       usersService.findOne.mockResolvedValue({ _id: 'u1' });
       propertiesService.findOne.mockResolvedValue({ _id: 'p1' });
 
-      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow('Save error');
+      await expect(service.addToFavorite('u1', 'p1')).rejects.toThrow(
+        'Save error',
+      );
     });
   });
 
@@ -157,7 +180,9 @@ describe('FavoritesService', () => {
       const populateMock = jest.fn().mockResolvedValue(null);
       model.findOneAndDelete.mockReturnValue({ populate: populateMock });
 
-      await expect(service.removeFromFavorite('u1', 'p1')).rejects.toThrow(NotFoundException);
+      await expect(service.removeFromFavorite('u1', 'p1')).rejects.toThrow(
+        NotFoundException,
+      );
       expect(populateMock).toHaveBeenCalledWith('propertyId');
     });
 
@@ -177,10 +202,14 @@ describe('FavoritesService', () => {
     });
 
     it('should handle database error during deletion', async () => {
-      const populateMock = jest.fn().mockRejectedValue(new Error('Database error'));
+      const populateMock = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
       model.findOneAndDelete.mockReturnValue({ populate: populateMock });
 
-      await expect(service.removeFromFavorite('u1', 'p1')).rejects.toThrow('Database error');
+      await expect(service.removeFromFavorite('u1', 'p1')).rejects.toThrow(
+        'Database error',
+      );
       expect(populateMock).toHaveBeenCalledWith('propertyId');
     });
   });

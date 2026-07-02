@@ -83,7 +83,9 @@ describe('StatesService', () => {
       model.findOne.mockResolvedValue(null);
       model.create.mockRejectedValue(new Error('Database error'));
 
-      await expect(service.create(createStateDto)).rejects.toThrow('Database error');
+      await expect(service.create(createStateDto)).rejects.toThrow(
+        'Database error',
+      );
     });
   });
 
@@ -176,6 +178,15 @@ describe('StatesService', () => {
         localGovernmentAreas: ['Area 1'],
       });
       expect(cacheService.delete).toHaveBeenCalledWith('states:all');
+    });
+
+    it('should throw NotFoundException when the state is deleted between the existence check and the update', async () => {
+      model.findById.mockResolvedValue({ _id: 's1', name: 'Test state' });
+      model.findByIdAndUpdate.mockResolvedValue(null);
+
+      await expect(
+        service.update('s1', { name: 'Renamed state' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update the state when no name is provided and clear cache', async () => {
