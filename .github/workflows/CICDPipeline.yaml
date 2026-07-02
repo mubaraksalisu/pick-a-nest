@@ -1,0 +1,91 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches:
+      - master
+
+  push:
+    branches:
+      - master
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: real-estate-api
+  ECS_CLUSTER: real-estate-cluster
+  ECS_SERVICE: real-estate-api-service
+  CONTAINER_NAME: real-estate-api
+
+jobs:
+  test:
+    name: Test Application
+
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:8.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+        env:
+          NODE_ENV: test
+          DATABASE_URL: mongodb://localhost:27017
+          DATABASE_NAME: pick-a-nest-test
+          REDIS_URL: redis://localhost:6379
+          SECRET: test-secret
+          REFRESH_EXPIRES_IN: 30d
+          ACCESS_EXPIRES_IN: 45m
+
+          # AwsS3Service and MailService both read these via
+          # ConfigService.getOrThrow() in their constructors, so the app
+          # fails to bootstrap entirely if they're unset -- every e2e suite
+          # would fail immediately, not just S3/email-related tests. Real
+          # values aren't needed: QueuesService is mocked in the e2e test
+          # harness (no real emails sent) and no test exercises the actual
+          # presigned-upload-url call to AWS.
+          AWS_ACCESS_KEY_ID: test-key
+          AWS_SECRET_ACCESS_KEY: test-secret-key
+          AWS_S3_BUCKET: test-bucket
+          RESEND_API_KEY: test-resend-key
+          EMAIL_FROM: noreply@example.com
+          FRONTEND_URL: http://localhost:3000
+
+      - name: Build application
+        run: npm run build
