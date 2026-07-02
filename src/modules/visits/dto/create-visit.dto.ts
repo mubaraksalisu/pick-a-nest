@@ -25,10 +25,6 @@ export class CreateVisitDto {
 
   @IsMongoId()
   @IsNotEmpty()
-  customerId: string;
-
-  @IsMongoId()
-  @IsNotEmpty()
   propertyId: string;
 
   @IsDateString()

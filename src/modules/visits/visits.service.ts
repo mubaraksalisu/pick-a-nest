@@ -33,7 +33,9 @@ export class VisitsService {
     private readonly queuesService: QueuesService,
   ) {}
 
-  async create(createVisitDto: CreateVisitDto): Promise<Visit> {
+  async create(
+    createVisitDto: CreateVisitDto & { customerId: string },
+  ): Promise<Visit> {
     const {
       propertyId,
       agentId,

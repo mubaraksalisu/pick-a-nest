@@ -67,17 +67,22 @@ describe('Visits booking (e2e)', () => {
     return created.body._id as string;
   };
 
-  const createVisit = (payload: {
-    propertyId: string;
-    agentId: string;
-    customerId: string;
-    visitDate: string;
-    startTime: string;
-    endTime: string;
-  }) =>
+  // customerId is derived server-side from the authenticated caller (not
+  // client-supplied), so the acting customer is passed explicitly here
+  // rather than as a body field.
+  const createVisit = (
+    actingCustomer: SeededUser,
+    payload: {
+      propertyId: string;
+      agentId: string;
+      visitDate: string;
+      startTime: string;
+      endTime: string;
+    },
+  ) =>
     request(server)
       .post('/visits')
-      .set('Authorization', `Bearer ${customer1.accessToken}`)
+      .set('Authorization', `Bearer ${actingCustomer.accessToken}`)
       .send(payload);
 
   beforeAll(async () => {
@@ -127,23 +132,22 @@ describe('Visits booking (e2e)', () => {
 
   describe('creating a visit', () => {
     it('creates a visit for a valid future window', async () => {
-      const response = await createVisit({
+      const response = await createVisit(customer1, {
         propertyId: propertyOne,
         agentId: agentA.id,
-        customerId: customer1.id,
         visitDate: futureDate(),
         startTime: '10:00',
         endTime: '11:00',
       }).expect(201);
 
       expect(response.body.status).toBe('pending');
+      expect(response.body.customerId).toBe(customer1.id);
     });
 
     it('rejects an overlapping visit for the same property', async () => {
-      await createVisit({
+      await createVisit(customer2, {
         propertyId: propertyOne,
         agentId: agentB.id,
-        customerId: customer2.id,
         visitDate: futureDate(),
         startTime: '10:30',
         endTime: '11:30',
@@ -151,10 +155,9 @@ describe('Visits booking (e2e)', () => {
     });
 
     it('rejects an overlapping visit for the same agent on a different property', async () => {
-      await createVisit({
+      await createVisit(customer2, {
         propertyId: propertyTwo,
         agentId: agentA.id,
-        customerId: customer2.id,
         visitDate: futureDate(),
         startTime: '10:30',
         endTime: '11:30',
@@ -162,10 +165,9 @@ describe('Visits booking (e2e)', () => {
     });
 
     it('rejects an overlapping visit for the same customer on a different property/agent', async () => {
-      await createVisit({
+      await createVisit(customer1, {
         propertyId: propertyThree,
         agentId: agentB.id,
-        customerId: customer1.id,
         visitDate: futureDate(),
         startTime: '10:30',
         endTime: '11:30',
@@ -173,10 +175,9 @@ describe('Visits booking (e2e)', () => {
     });
 
     it('rejects a visit longer than 4 hours', async () => {
-      await createVisit({
+      await createVisit(customer2, {
         propertyId: propertyThree,
         agentId: agentB.id,
-        customerId: customer2.id,
         visitDate: futureDate(),
         startTime: '08:00',
         endTime: '13:00',
@@ -184,10 +185,9 @@ describe('Visits booking (e2e)', () => {
     });
 
     it('rejects a visit with a start date in the past', async () => {
-      await createVisit({
+      await createVisit(customer2, {
         propertyId: propertyThree,
         agentId: agentB.id,
-        customerId: customer2.id,
         visitDate: futureDate(-2),
         startTime: '10:00',
         endTime: '11:00',
@@ -199,10 +199,9 @@ describe('Visits booking (e2e)', () => {
     let visitId: string;
 
     beforeAll(async () => {
-      const created = await createVisit({
+      const created = await createVisit(customer2, {
         propertyId: propertyThree,
         agentId: agentB.id,
-        customerId: customer2.id,
         visitDate: futureDate(10),
         startTime: '09:00',
         endTime: '10:00',
@@ -235,10 +234,9 @@ describe('Visits booking (e2e)', () => {
     });
 
     it('rejects rescheduling into a window that now conflicts with another visit', async () => {
-      await createVisit({
+      await createVisit(customer1, {
         propertyId: propertyThree,
         agentId: agentB.id,
-        customerId: customer1.id,
         visitDate: futureDate(12),
         startTime: '09:00',
         endTime: '10:00',
@@ -258,10 +256,9 @@ describe('Visits booking (e2e)', () => {
 
   describe('cancelling a visit', () => {
     it('rejects cancelling a visit that is already completed', async () => {
-      const created = await createVisit({
+      const created = await createVisit(customer1, {
         propertyId: propertyThree,
         agentId: agentB.id,
-        customerId: customer1.id,
         visitDate: futureDate(20),
         startTime: '09:00',
         endTime: '10:00',

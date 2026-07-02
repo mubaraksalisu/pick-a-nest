@@ -121,7 +121,6 @@ describe('DTO validation pipe (e2e)', () => {
         .send({
           propertyId: '000000000000000000000001',
           agentId: '000000000000000000000002',
-          customerId: '000000000000000000000003',
           visitDate: futureDate(),
           startTime: '25:99',
           endTime: '11:00',

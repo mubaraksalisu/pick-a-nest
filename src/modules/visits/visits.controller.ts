@@ -59,8 +59,14 @@ export class VisitsController {
     description: 'Create and return a visit document',
     type: VisitResponseDto,
   })
-  create(@Body(ValidationPipe) createVisitDto: CreateVisitDto) {
-    return this.visitsService.create(createVisitDto);
+  create(
+    @Body(ValidationPipe) createVisitDto: CreateVisitDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.visitsService.create({
+      ...createVisitDto,
+      customerId: req.user._id,
+    });
   }
 
   @UseGuards(ObjectIdGuard, CanAccessVisitGuard)

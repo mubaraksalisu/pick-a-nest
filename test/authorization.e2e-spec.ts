@@ -102,7 +102,7 @@ describe('Authorization (e2e)', () => {
       .send({
         propertyId: approvedPropertyId,
         agentId: agentOwner.id,
-        customerId: customer.id,
+        // customerId is derived server-side from the authenticated caller
         visitDate: futureDate(),
         startTime: '10:00',
         endTime: '11:00',
@@ -274,12 +274,12 @@ describe('Authorization (e2e)', () => {
     });
   });
 
-  describe('POST /visits authorization (documented current behavior)', () => {
-    it('allows any authenticated user to create a visit naming other people as agent/customer', async () => {
-      // POST /visits only requires JwtAuthGuard -- unlike every other visit
-      // mutation, there is no check that the caller is actually the named
-      // agentId or customerId. This test documents that current behavior
-      // rather than asserting it's correct; flagged separately as a gap.
+  describe('POST /visits customer attribution', () => {
+    it('always attributes the visit to the authenticated caller, ignoring any customerId sent in the body', async () => {
+      // customerId is not part of CreateVisitDto -- it's derived from
+      // req.user._id in the controller, the same way properties.controller
+      // derives ownerId. Sending it should be rejected by
+      // forbidNonWhitelisted rather than silently accepted or ignored.
       await request(server)
         .post('/visits')
         .set('Authorization', `Bearer ${outsider.accessToken}`)
@@ -291,7 +291,21 @@ describe('Authorization (e2e)', () => {
           startTime: '09:00',
           endTime: '10:00',
         })
+        .expect(400);
+
+      const response = await request(server)
+        .post('/visits')
+        .set('Authorization', `Bearer ${outsider.accessToken}`)
+        .send({
+          propertyId: approvedPropertyId,
+          agentId: agentOwner.id,
+          visitDate: futureDate(6),
+          startTime: '09:00',
+          endTime: '10:00',
+        })
         .expect(201);
+
+      expect(response.body.customerId).toBe(outsider.id);
     });
   });
 });
