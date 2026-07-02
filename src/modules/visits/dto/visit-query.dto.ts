@@ -8,7 +8,6 @@ import {
   IsPositive,
   Max,
   Min,
-  IsString,
 } from 'class-validator';
 import { VisitStatus } from './create-visit.dto';
 

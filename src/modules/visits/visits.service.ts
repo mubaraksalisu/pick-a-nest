@@ -16,7 +16,7 @@ import { FeedbackVisitDto } from './dto/feedback-visit.dto';
 import { VisitQueryDto } from './dto/visit-query.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Visit } from './schemas/visit.schema';
-import { FilterQuery, Model, Types } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import * as luxon from 'luxon';
 import { PropertiesService } from 'src/modules/properties/properties.service';
 import { UsersService } from 'src/modules/users/users.service';
@@ -98,9 +98,7 @@ export class VisitsService {
   async confirm(id: string): Promise<Visit> {
     const visit = await this.findOne(id);
     if (
-      ![VisitStatus.PENDING, VisitStatus.RESCHEDULED].includes(
-        visit.status as VisitStatus,
-      )
+      ![VisitStatus.PENDING, VisitStatus.RESCHEDULED].includes(visit.status)
     ) {
       throw new BadRequestException(
         'Only pending or rescheduled visits can be confirmed',
@@ -123,9 +121,7 @@ export class VisitsService {
   async complete(id: string): Promise<Visit> {
     const visit = await this.findOne(id);
     if (
-      ![VisitStatus.CONFIRMED, VisitStatus.RESCHEDULED].includes(
-        visit.status as VisitStatus,
-      )
+      ![VisitStatus.CONFIRMED, VisitStatus.RESCHEDULED].includes(visit.status)
     ) {
       throw new BadRequestException(
         'Only confirmed or rescheduled visits can be completed',
@@ -145,7 +141,7 @@ export class VisitsService {
         VisitStatus.CANCELLED,
         VisitStatus.COMPLETED,
         VisitStatus.NO_SHOW,
-      ].includes(visit.status as VisitStatus)
+      ].includes(visit.status)
     ) {
       throw new BadRequestException(
         'Visit cannot be cancelled in current state',
@@ -183,7 +179,7 @@ export class VisitsService {
         VisitStatus.COMPLETED,
         VisitStatus.CANCELLED,
         VisitStatus.NO_SHOW,
-      ].includes(visit.status as VisitStatus)
+      ].includes(visit.status)
     ) {
       throw new BadRequestException(
         'Only pending, confirmed, or rescheduled visits can be rescheduled',
@@ -413,9 +409,7 @@ export class VisitsService {
       [VisitStatus.NO_SHOW]: [],
     };
 
-    if (
-      !allowed[visit.status as VisitStatus].includes(changeStatusDto.status)
-    ) {
+    if (!allowed[visit.status].includes(changeStatusDto.status)) {
       throw new BadRequestException(
         `Invalid transition from ${visit.status} to ${changeStatusDto.status}`,
       );

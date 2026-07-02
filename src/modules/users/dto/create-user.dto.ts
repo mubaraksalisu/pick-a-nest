@@ -3,11 +3,9 @@ import { Type } from 'class-transformer';
 import {
   IsString,
   IsEmail,
-  IsBoolean,
   IsOptional,
   MinLength,
   MaxLength,
-  IsEnum,
   Min,
   IsInt,
 } from 'class-validator';

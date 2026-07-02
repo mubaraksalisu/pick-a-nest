@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, SchemaTypes, Types } from 'mongoose';
+import { VisitStatus } from '../dto/create-visit.dto';
 
 @Schema({ timestamps: true })
 export class Visit extends Document {
@@ -79,17 +80,10 @@ export class Visit extends Document {
 
   @Prop({
     type: String,
-    enum: [
-      'pending',
-      'confirmed',
-      'rescheduled',
-      'completed',
-      'cancelled',
-      'no_show',
-    ],
-    default: 'pending',
+    enum: Object.values(VisitStatus),
+    default: VisitStatus.PENDING,
   })
-  status: string;
+  status: VisitStatus;
 
   @Prop({ type: Date })
   confirmedAt?: Date;

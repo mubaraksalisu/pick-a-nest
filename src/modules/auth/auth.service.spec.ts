@@ -787,9 +787,7 @@ describe('AuthService', () => {
 
     it('should not attempt to revoke when no matching token record is found', async () => {
       (jwtService.verify as jest.Mock).mockReturnValue({ sub: 'userId' });
-      (refreshTokenService.validateToken as jest.Mock).mockResolvedValue(
-        null,
-      );
+      (refreshTokenService.validateToken as jest.Mock).mockResolvedValue(null);
 
       await expect(service.logout('validToken')).resolves.toBeUndefined();
       expect(refreshTokenService.validateToken).toHaveBeenCalledWith(

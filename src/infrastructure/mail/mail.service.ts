@@ -32,13 +32,13 @@ export class MailService {
 
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
     try {
-      const response = await this.resend.emails.send({
+      await this.resend.emails.send({
         from: this.fromEmail,
         to,
         subject,
         html,
       });
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Failed to send email');
     }
   }

@@ -27,7 +27,7 @@ describe('UsersService', () => {
       return Promise.resolve({ _id: 'u1', ...dto, toObject: this.toObject });
     });
   }
-  mockUserModel.nextSaveError = null as any;
+  mockUserModel.nextSaveError = null as Error | null;
 
   const createSkipLimitSelectQuery = (result: any) => ({
     skip: jest.fn().mockReturnThis(),

@@ -32,7 +32,7 @@ import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('DATABASE_URL'),
         dbName: configService.get<string>('DATABASE_NAME'),
       }),
@@ -50,7 +50,8 @@ import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
             winston.format.metadata(),
             winston.format.printf(
               ({ level, message, timestamp, stack, metadata }) => {
-                return `[${timestamp}] ${level}: ${message} ${JSON.stringify(metadata)} ${stack ? '\n' + stack : ''}`;
+                const stackText = typeof stack === 'string' ? `\n${stack}` : '';
+                return `[${String(timestamp)}] ${level}: ${String(message)} ${JSON.stringify(metadata)} ${stackText}`;
               },
             ),
           ),

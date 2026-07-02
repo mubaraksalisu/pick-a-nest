@@ -1,8 +1,8 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto, UserResponseDto } from '../users/dto/create-user.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { RefreshTokenService } from 'src/modules/auth/refresh-token/refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/modules/users/users.service';
@@ -94,7 +94,7 @@ export class AuthService {
       }
 
       return this.login(user);
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
@@ -125,11 +125,9 @@ export class AuthService {
         token,
       );
       if (hashedToken) {
-        await this.refreshTokenService.revokeToken(
-          hashedToken._id.toString(),
-        );
+        await this.refreshTokenService.revokeToken(hashedToken._id.toString());
       }
-    } catch (error) {
+    } catch {
       return; // Token is invalid or already revoked, so we can ignore it
     }
   }

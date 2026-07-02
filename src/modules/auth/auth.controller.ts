@@ -42,7 +42,7 @@ export class AuthController {
   })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
   @ApiCreatedResponse({ description: 'user login success', type: LoginDto })
-  login(@Req() req: Request, @Body(ValidationPipe) authDto: AuthPayloadDto) {
+  login(@Req() req: Request, @Body(ValidationPipe) _authDto: AuthPayloadDto) {
     return this.authService.login(req.user);
   }
 

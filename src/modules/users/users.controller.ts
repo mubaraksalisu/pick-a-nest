@@ -26,7 +26,6 @@ import {
   ApiParam,
   ApiQuery,
   ApiTags,
-  ApiCreatedResponse,
 } from '@nestjs/swagger';
 import {
   GetUsersResponseDto,

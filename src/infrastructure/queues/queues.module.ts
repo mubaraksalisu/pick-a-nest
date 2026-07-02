@@ -10,7 +10,7 @@ import { MailModule } from '../mail/mail.module';
   imports: [
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: (configService: ConfigService) => {
         return {
           connection: {
             host: configService.get<string>('REDIS_HOST', 'localhost'),

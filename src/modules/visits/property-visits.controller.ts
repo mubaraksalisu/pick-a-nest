@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { VisitsService } from './visits.service';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt.guard';
 import { ObjectIdGuard } from 'src/shared/guards/object-id.guard';

@@ -21,7 +21,7 @@ import { QueuesModule } from 'src/infrastructure/queues/queues.module';
     QueuesModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('SECRET'),
       }),
       inject: [ConfigService],

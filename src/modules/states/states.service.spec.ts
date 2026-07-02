@@ -50,11 +50,6 @@ describe('StatesService', () => {
     localGovernmentAreas: ['Area 1'],
   };
 
-  const updatedStateDto = {
-    name: 'Updated state',
-    localGovernmentAreas: ['Area 2'],
-  };
-
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
