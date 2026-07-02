@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { EmailVerification } from './email-verification.schema';
 
-Injectable();
+@Injectable()
 export class EmailVerificationService {
   constructor(
     @InjectModel(EmailVerification.name)
