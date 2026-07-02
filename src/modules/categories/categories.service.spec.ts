@@ -3,10 +3,12 @@ import { CategoriesService } from './categories.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Category } from './schemas/category.schema';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { CacheService } from 'src/infrastructure/cache/cache.service';
 
 describe('Categories', () => {
   let service: CategoriesService;
   let model: any;
+  let cacheService: any;
 
   function mockCategoryModel(this: any, dto: any) {
     this.data = dto;
@@ -25,6 +27,12 @@ describe('Categories', () => {
   };
 
   beforeEach(async () => {
+    cacheService = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CategoriesService,
@@ -32,6 +40,7 @@ describe('Categories', () => {
           provide: getModelToken(Category.name),
           useValue: mockCategoryModel,
         },
+        { provide: CacheService, useValue: cacheService },
       ],
     }).compile();
 

@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AwsS3Service } from './aws-s3.service';
 import { ConfigService } from '@nestjs/config';
+// uuid ships ESM-only and isn't transformed by ts-jest; mock it directly so
+// importing AwsS3Service doesn't try to parse the real package.
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => 'mock-uuid-v4'),
+}));
+import { AwsS3Service } from './aws-s3.service';
 
 describe('AwsS3Service', () => {
   let service: AwsS3Service;
